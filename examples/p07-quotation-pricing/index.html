@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>量潮科技 - 报价计算器</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "Noto Sans SC", sans-serif; background: #f5f5f5; padding: 40px; color: #333; }
+.container { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; }
+h1 { font-size: 22px; margin-bottom: 4px; }
+.subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+.section { margin-bottom: 24px; }
+.section h2 { font-size: 15px; color: #1a1a1a; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+.form-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+.form-group { flex: 1; min-width: 180px; }
+.form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
+.form-group select, .form-group input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+.form-group input { width: 100%; }
+.checkbox-group { margin-top: 8px; }
+.checkbox-group label { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 6px; cursor: pointer; }
+.checkbox-group input[type="checkbox"] { width: 16px; height: 16px; }
+table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #fafafa; font-weight: 500; color: #555; font-size: 13px; }
+.result-card { background: #f8f9fa; border-radius: 6px; padding: 20px; margin-top: 8px; }
+.result-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+.result-row.total { font-weight: 700; font-size: 16px; border-top: 2px solid #ddd; padding-top: 10px; margin-top: 6px; }
+.result-row .label { color: #666; }
+.btn { padding: 10px 24px; background: #1a73e8; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
+.btn:hover { background: #1557b0; }
+.btn-secondary { background: #e8e8e8; color: #333; }
+.btn-secondary:hover { background: #d0d0d0; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; margin: 1px; }
+.tag-blue { background: #e3f2fd; color: #1565c0; }
+.tag-green { background: #e8f5e9; color: #2e7d32; }
+.tag-orange { background: #fff3e0; color: #e65100; }
+.tag-red { background: #fce4ec; color: #c62828; }
+.hidden { display: none; }
+#pricingPrinciples { margin-top: 12px; }
+.principle { padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; font-size: 13px; }
+.principle.applied { background: #e8f5e9; border-left: 3px solid #2e7d32; }
+.principle.not-applied { background: #f5f5f5; border-left: 3px solid #bbb; color: #999; }
+.principle strong { display: block; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>报价计算器</h1>
+  <p class="subtitle">依据《量潮科技商务报价章程 v0.5.3》实现</p>
+
+  <div class="section">
+    <h2>项目信息</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>客户类型</label>
+        <select id="customerType">
+          <option value="enterprise">企业客户</option>
+          <option value="university">高校客户</option>
+          <option value="student">学生客户</option>
+          <option value="other">其他客户</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>人员等级</label>
+        <select id="personnelLevel">
+          <option value="chief">首席</option>
+          <option value="senior">资深</option>
+          <option value="advanced">高级</option>
+          <option value="mid">中级</option>
+          <option value="junior">初级</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>服务时长（小时）</label>
+        <input type="number" id="hours" value="44" min="1">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>定价要素</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>稀缺性评估</label>
+        <select id="scarcity">
+          <option value="low">低 — 市场供应充足</option>
+          <option value="medium" selected>中 — 需一定专业能力</option>
+          <option value="high">高 — 技术难度大 / 资源稀缺</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>机会成本</label>
+        <select id="opportunityCost">
+          <option value="none">无 — 无项目冲突</option>
+          <option value="low">低 — 有替代项目但价值一般</option>
+          <option value="high" selected>高 — 占用稀缺排期</option>
+        </select>
+      </div>
+    </div>
+    <div class="checkbox-group">
+      <label><input type="checkbox" id="innovationPremium" checked> 含创新溢价（新模式 / 新方法 / 新技术）</label>
+      <label><input type="checkbox" id="longTermValue" checked> 具备长期合作潜力</label>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>溢价判断</h2>
+    <div class="checkbox-group">
+      <label><input type="checkbox" id="p1"> 微专业共建或长期课程开发</label>
+      <label><input type="checkbox" id="p2" checked> 企业内训体系设计</label>
+      <label><input type="checkbox" id="p3" checked> 高复杂度或高定制化项目</label>
+    </div>
+    <div class="form-row" style="margin-top:12px;">
+      <div class="form-group">
+        <label>溢价幅度 (%)</label>
+        <input type="number" id="premiumRate" value="40" min="30" max="50">
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>让利条件</h2>
+    <div class="checkbox-group">
+      <label><input type="checkbox" id="discount10h" checked> 单客户单月满 10 小时（9 折）</label>
+      <label><input type="checkbox" id="discount20h"> 单客户单月满 20 小时（8.5 折）</label>
+      <label><input type="checkbox" id="firstDeal" checked> 首次合作（不低于保本线）</label>
+    </div>
+  </div>
+
+  <div class="section" style="text-align:center;">
+    <button class="btn" onclick="calculate()">计算报价</button>
+    <button class="btn btn-secondary" onclick="resetForm()" style="margin-left:8px;">重置</button>
+  </div>
+
+  <div class="section hidden" id="resultSection">
+    <h2>报价结果</h2>
+    <div class="result-card" id="approvalInfo"></div>
+    <div class="result-card" style="margin-top:12px;" id="breakdown"></div>
+    <div id="pricingPrinciples" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<script>
+const config = {
+  version: "0.1.0",
+  lastUpdated: "2026-06-01",
+  customerTypes: {
+    enterprise: { label: "企业客户", discountRate: 1.0 },
+    university: { label: "高校客户", discountRate: 0.75 },
+    student: { label: "学生客户", discountRate: 0.25 },
+    other: { label: "其他客户", discountRate: null }
+  },
+  personnelLevels: {
+    chief: { label: "首席", basePrice: 2000, serviceTarget: "管理层" },
+    senior: { label: "资深", basePrice: 1500, serviceTarget: "管理层" },
+    advanced: { label: "高级", basePrice: 1000, serviceTarget: "一线人员" },
+    mid: { label: "中级", basePrice: 600, serviceTarget: "一线人员" },
+    junior: { label: "初级", basePrice: 350, serviceTarget: "一线人员" }
+  },
+  premiumRules: {
+    conditions: ["微专业共建或长期课程开发", "企业内训体系设计", "高复杂度或高定制化项目"],
+    premiumRange: { min: 0.3, max: 0.5 },
+    approvalRequired: true
+  },
+  discountRules: [
+    { condition: "单客户单月满10小时", rate: 0.9 },
+    { condition: "单客户单月满20小时", rate: 0.85 },
+    { condition: "首次合作", rule: "不低于保本线" }
+  ],
+  approvalLevels: {
+    standard: { label: "标准报价", approver: "业务线负责人", conditions: "常规项目，无溢价、无让利" },
+    major: { label: "重大报价", approver: "公司管理层", conditions: "超金额标准，或涉及溢价报价" },
+    discount: { label: "让利报价", approver: "公司管理层", conditions: "让利幅度超规定比例" }
+  }
+};
+
+function calculate() {
+  const customerType = document.getElementById('customerType').value;
+  const level = document.getElementById('personnelLevel').value;
+  const hours = parseInt(document.getElementById('hours').value) || 0;
+
+  const discountRate = config.customerTypes[customerType].discountRate;
+  if (discountRate === null) { alert('其他客户需一事一议，本计算器暂不支持。'); return; }
+
+  const basePrice = config.personnelLevels[level].basePrice;
+  const baseTotal = basePrice * hours * discountRate;
+
+  const hasPremium = document.getElementById('p1').checked || document.getElementById('p2').checked || document.getElementById('p3').checked;
+  const premiumRate = hasPremium ? (parseInt(document.getElementById('premiumRate').value) || 0) / 100 : 0;
+  const premiumAmount = baseTotal * premiumRate;
+
+  const subTotal = baseTotal + premiumAmount;
+
+  let discountRateApplied = 1.0;
+  let discountNote = '';
+  if (document.getElementById('discount20h').checked && hours >= 20) {
+    discountRateApplied = 0.85;
+    discountNote = '满20小时8.5折';
+  } else if (document.getElementById('discount10h').checked && hours >= 10) {
+    discountRateApplied = 0.9;
+    discountNote = '满10小时9折';
+  } else if (document.getElementById('firstDeal').checked) {
+    discountRateApplied = 1.0;
+    discountNote = '首次合作（不低于保本线，本次未触发打折条件）';
+  }
+  const discountAmount = subTotal * (1 - discountRateApplied);
+  const finalTotal = subTotal - discountAmount;
+
+  const isMajor = hasPremium || finalTotal > 50000;
+  const isDiscount = document.getElementById('discount20h').checked || (document.getElementById('discount10h').checked && hours >= 10 && document.getElementById('firstDeal').checked && finalTotal < 10000);
+
+  let approvalType, approver;
+  if (isDiscount && discountAmount > 0.15 * finalTotal) {
+    approvalType = '让利报价'; approver = '公司管理层';
+  } else if (isMajor) {
+    approvalType = '重大报价'; approver = '公司管理层';
+  } else {
+    approvalType = '标准报价'; approver = '业务线负责人';
+  }
+
+  const pricingDesc = [
+    { name: '基础价值（工作量）', applied: true, desc: `${hours}小时，${level}级人员` },
+    { name: '溢价价值（稀缺性）', applied: document.getElementById('scarcity').value !== 'low', desc: document.getElementById('scarcity').options[document.getElementById('scarcity').selectedIndex].text },
+    { name: '增量价值（创新溢价）', applied: document.getElementById('innovationPremium').checked || hasPremium, desc: hasPremium ? '满足溢价条件' : '标准服务' },
+    { name: '长期价值（合作关系）', applied: document.getElementById('longTermValue').checked, desc: document.getElementById('longTermValue').checked ? '具备持续合作潜力' : '单次合作' },
+  ];
+
+  document.getElementById('resultSection').classList.remove('hidden');
+
+  document.getElementById('approvalInfo').innerHTML = `
+    <div class="result-row"><span class="label">报价类型</span><span>${approvalType}</span></div>
+    <div class="result-row"><span class="label">审批人</span><span>${approver}</span></div>
+  `;
+
+  document.getElementById('breakdown').innerHTML = `
+    <div class="result-row"><span class="label">基准价格（${level} × ${customerType}）</span><span>${fmt(basePrice)} 元/h × ${hours}h × ${discountRate * 100}% = ${fmt(baseTotal)} 元</span></div>
+    ${hasPremium ? `<div class="result-row"><span class="label">溢价（${premiumRate * 100}%）</span><span>+${fmt(premiumAmount)} 元</span></div>` : ''}
+    ${discountAmount > 0 ? `<div class="result-row"><span class="label">让利（${discountNote}）</span><span>-${fmt(discountAmount)} 元</span></div>` : ''}
+    <div class="result-row total"><span class="label">最终报价</span><span>${fmt(finalTotal)} 元</span></div>
+  `;
+
+  document.getElementById('pricingPrinciples').innerHTML = pricingDesc.map(p =>
+    `<div class="principle ${p.applied ? 'applied' : 'not-applied'}"><strong>${p.name}</strong>${p.desc}</div>`
+  ).join('');
+}
+
+function fmt(n) { return Math.round(n).toLocaleString(); }
+function resetForm() {
+  document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+  document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+  document.getElementById('hours').value = 44;
+  document.getElementById('premiumRate').value = 40;
+  document.getElementById('resultSection').classList.add('hidden');
+}
+</script>
+</body>
+</html>
