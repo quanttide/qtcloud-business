@@ -98,6 +98,16 @@ th { background: #fafafa; font-weight: 500; color: #555; font-size: 12px; }
           <option value="high" selected>高 — 占用稀缺排期</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>交付时限</label>
+        <select id="deadline">
+          <option value="urgent">1周内（加急）</option>
+          <option value="soon" selected>2周内</option>
+          <option value="month">1个月内</option>
+          <option value="flexible">1-3个月</option>
+          <option value="open">灵活（无明确时限）</option>
+        </select>
+      </div>
     </div>
     <div class="checkbox-group">
       <label><input type="checkbox" id="innovationPremium" checked> 含创新溢价（新模式 / 新方法 / 新技术）</label>
@@ -276,7 +286,7 @@ function calculate() {
 
   const pricingDesc = [
     { name: '基础价值（工作量）', applied: true, desc: `${entries.length} 个岗位，共 ${totalHours} 小时` },
-    { name: '溢价价值（稀缺性）', applied: document.getElementById('scarcity').value !== 'low', desc: document.getElementById('scarcity').options[document.getElementById('scarcity').selectedIndex].text },
+    { name: '溢价价值（稀缺性）', applied: document.getElementById('scarcity').value !== 'low', desc: `${document.getElementById('scarcity').options[document.getElementById('scarcity').selectedIndex].text} | 交付：${document.getElementById('deadline').options[document.getElementById('deadline').selectedIndex].text}` },
     { name: '增量价值（创新溢价）', applied: document.getElementById('innovationPremium').checked || hasPremium, desc: hasPremium ? '满足溢价条件' : '标准服务' },
     { name: '长期价值（合作关系）', applied: document.getElementById('longTermValue').checked, desc: document.getElementById('longTermValue').checked ? '具备持续合作潜力' : '单次合作' },
   ];
@@ -319,6 +329,7 @@ function resetForm() {
   document.getElementById('resultSection').classList.add('hidden');
   document.getElementById('scarcity').value = 'medium';
   document.getElementById('opportunityCost').value = 'high';
+  document.getElementById('deadline').value = 'soon';
   document.getElementById('p2').checked = true;
   document.getElementById('p3').checked = true;
   document.getElementById('discount10h').checked = true;
