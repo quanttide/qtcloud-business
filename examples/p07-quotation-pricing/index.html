@@ -11,45 +11,50 @@ h1 { font-size: 22px; margin-bottom: 4px; }
 .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
 .section { margin-bottom: 24px; }
 .section h2 { font-size: 15px; color: #1a1a1a; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
-.form-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
-.form-group { flex: 1; min-width: 180px; }
-.form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
-.form-group select, .form-group input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-.form-group input { width: 100%; }
-.checkbox-group { margin-top: 8px; }
-.checkbox-group label { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 6px; cursor: pointer; }
-.checkbox-group input[type="checkbox"] { width: 16px; height: 16px; }
-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
-th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; }
-th { background: #fafafa; font-weight: 500; color: #555; font-size: 13px; }
-.result-card { background: #f8f9fa; border-radius: 6px; padding: 20px; margin-top: 8px; }
-.result-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-.result-row.total { font-weight: 700; font-size: 16px; border-top: 2px solid #ddd; padding-top: 10px; margin-top: 6px; }
-.result-row .label { color: #666; }
-.btn { padding: 10px 24px; background: #1a73e8; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
+.form-row { display: flex; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; align-items: end; }
+.form-row.header { font-size: 12px; color: #888; margin-bottom: 4px; }
+.form-row.header > span { flex: 1; min-width: 60px; }
+.form-group { flex: 1; min-width: 100px; }
+.form-group label { display: block; font-size: 12px; color: #666; margin-bottom: 2px; }
+.form-group select, .form-group input { width: 100%; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+.btn { padding: 8px 20px; background: #1a73e8; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
 .btn:hover { background: #1557b0; }
+.btn-sm { padding: 4px 12px; font-size: 12px; }
+.btn-danger { background: #e53935; }
+.btn-danger:hover { background: #c62828; }
 .btn-secondary { background: #e8e8e8; color: #333; }
 .btn-secondary:hover { background: #d0d0d0; }
-.tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; margin: 1px; }
-.tag-blue { background: #e3f2fd; color: #1565c0; }
-.tag-green { background: #e8f5e9; color: #2e7d32; }
-.tag-orange { background: #fff3e0; color: #e65100; }
-.tag-red { background: #fce4ec; color: #c62828; }
+.personnel-entry { display: flex; gap: 12px; align-items: center; padding: 8px 12px; background: #f9f9f9; border-radius: 4px; margin-bottom: 6px; }
+.personnel-entry > * { flex: 1; min-width: 80px; }
+.personnel-entry .remove-btn { flex: 0 0 32px; text-align: center; cursor: pointer; color: #999; font-size: 18px; }
+.personnel-entry .remove-btn:hover { color: #e53935; }
+.checkbox-group { margin-top: 8px; }
+.checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 4px; cursor: pointer; }
+.checkbox-group input[type="checkbox"] { width: 14px; height: 14px; }
+table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #fafafa; font-weight: 500; color: #555; font-size: 12px; }
+.result-card { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-top: 8px; }
+.result-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+.result-row.total { font-weight: 700; font-size: 15px; border-top: 2px solid #ddd; padding-top: 8px; margin-top: 4px; }
+.result-row .label { color: #666; }
+.tag { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin: 1px; }
 .hidden { display: none; }
 #pricingPrinciples { margin-top: 12px; }
-.principle { padding: 8px 12px; margin-bottom: 6px; border-radius: 4px; font-size: 13px; }
+.principle { padding: 6px 10px; margin-bottom: 4px; border-radius: 4px; font-size: 12px; }
 .principle.applied { background: #e8f5e9; border-left: 3px solid #2e7d32; }
 .principle.not-applied { background: #f5f5f5; border-left: 3px solid #bbb; color: #999; }
 .principle strong { display: block; margin-bottom: 2px; }
+.entry-summary { font-size: 12px; color: #666; margin-top: 4px; }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>报价计算器</h1>
-  <p class="subtitle">依据《量潮科技商务报价章程 v0.5.3》实现</p>
+  <p class="subtitle">依据《量潮科技商务报价章程 v0.5.3》实现。按项目实际人员配置逐人录入。</p>
 
   <div class="section">
-    <h2>项目信息</h2>
+    <h2>客户信息</h2>
     <div class="form-row">
       <div class="form-group">
         <label>客户类型</label>
@@ -61,20 +66,17 @@ th { background: #fafafa; font-weight: 500; color: #555; font-size: 13px; }
         </select>
       </div>
       <div class="form-group">
-        <label>人员等级</label>
-        <select id="personnelLevel">
-          <option value="chief">首席</option>
-          <option value="senior">资深</option>
-          <option value="advanced">高级</option>
-          <option value="mid">中级</option>
-          <option value="junior">初级</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>服务时长（小时）</label>
-        <input type="number" id="hours" value="44" min="1">
+        <label>项目名称</label>
+        <input type="text" id="projectName" value="管理者数据思维内训">
       </div>
     </div>
+  </div>
+
+  <div class="section">
+    <h2>项目人员配置</h2>
+    <p style="font-size:12px;color:#888;margin-bottom:8px;">为每个参与项目的服务人员选择等级、填写人数和单人服务时长。</p>
+    <div id="personnelList"></div>
+    <button class="btn btn-secondary btn-sm" onclick="addEntry()">+ 添加人员</button>
   </div>
 
   <div class="section">
@@ -110,7 +112,7 @@ th { background: #fafafa; font-weight: 500; color: #555; font-size: 13px; }
       <label><input type="checkbox" id="p2" checked> 企业内训体系设计</label>
       <label><input type="checkbox" id="p3" checked> 高复杂度或高定制化项目</label>
     </div>
-    <div class="form-row" style="margin-top:12px;">
+    <div class="form-row" style="margin-top:8px;">
       <div class="form-group">
         <label>溢价幅度 (%)</label>
         <input type="number" id="premiumRate" value="40" min="30" max="50">
@@ -135,15 +137,15 @@ th { background: #fafafa; font-weight: 500; color: #555; font-size: 13px; }
   <div class="section hidden" id="resultSection">
     <h2>报价结果</h2>
     <div class="result-card" id="approvalInfo"></div>
-    <div class="result-card" style="margin-top:12px;" id="breakdown"></div>
-    <div id="pricingPrinciples" style="margin-top:12px;"></div>
+    <div class="result-card" style="margin-top:8px;" id="personnelCost"></div>
+    <div class="result-card" style="margin-top:8px;" id="breakdown"></div>
+    <div id="pricingPrinciples" style="margin-top:8px;"></div>
   </div>
 </div>
 
 <script>
 const config = {
-  version: "0.1.0",
-  lastUpdated: "2026-06-01",
+  version: "0.1.0", lastUpdated: "2026-06-01",
   customerTypes: {
     enterprise: { label: "企业客户", discountRate: 1.0 },
     university: { label: "高校客户", discountRate: 0.75 },
@@ -159,8 +161,7 @@ const config = {
   },
   premiumRules: {
     conditions: ["微专业共建或长期课程开发", "企业内训体系设计", "高复杂度或高定制化项目"],
-    premiumRange: { min: 0.3, max: 0.5 },
-    approvalRequired: true
+    premiumRange: { min: 0.3, max: 0.5 }, approvalRequired: true
   },
   discountRules: [
     { condition: "单客户单月满10小时", rate: 0.9 },
@@ -174,16 +175,75 @@ const config = {
   }
 };
 
-function calculate() {
-  const customerType = document.getElementById('customerType').value;
-  const level = document.getElementById('personnelLevel').value;
-  const hours = parseInt(document.getElementById('hours').value) || 0;
+let entries = [];
 
+function addEntry(level, count, hours) {
+  entries.push({
+    level: level || 'advanced',
+    count: parseInt(count) || 1,
+    hours: parseInt(hours) || 8
+  });
+  renderEntries();
+}
+
+function removeEntry(idx) {
+  entries.splice(idx, 1);
+  renderEntries();
+}
+
+function renderEntries() {
+  const list = document.getElementById('personnelList');
+  if (entries.length === 0) {
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:#aaa;font-size:13px;">尚未添加人员，请点击下方按钮添加。</div>';
+    return;
+  }
+  list.innerHTML = `
+    <div class="form-row header" style="padding:0 12px;">
+      <span>等级</span><span>人数</span><span>单人时长(h)</span><span>小计</span><span></span>
+    </div>
+    ${entries.map((e, i) => {
+      const price = config.personnelLevels[e.level].basePrice;
+      const subtotal = price * e.count * e.hours;
+      return `<div class="personnel-entry">
+        <select onchange="updateEntry(${i},'level',this.value)">
+          ${Object.entries(config.personnelLevels).map(([k,v]) => `<option value="${k}" ${k===e.level?'selected':''}>${v.label}</option>`).join('')}
+        </select>
+        <input type="number" value="${e.count}" min="1" onchange="updateEntry(${i},'count',this.value)">
+        <input type="number" value="${e.hours}" min="1" onchange="updateEntry(${i},'hours',this.value)">
+        <span style="font-size:13px;">${fmt(subtotal)} 元</span>
+        <span class="remove-btn" onclick="removeEntry(${i})">✕</span>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function updateEntry(idx, field, value) {
+  if (field === 'level') entries[idx].level = value;
+  else if (field === 'count') entries[idx].count = parseInt(value) || 1;
+  else if (field === 'hours') entries[idx].hours = parseInt(value) || 1;
+  renderEntries();
+}
+
+function getTotalHours(entries) {
+  return entries.reduce((s, e) => s + e.count * e.hours, 0);
+}
+
+function getBaseTotal(entries, discountRate) {
+  return entries.reduce((s, e) => {
+    const basePrice = config.personnelLevels[e.level].basePrice;
+    return s + basePrice * e.count * e.hours * discountRate;
+  }, 0);
+}
+
+function calculate() {
+  if (entries.length === 0) { alert('请至少添加一名项目人员。'); return; }
+
+  const customerType = document.getElementById('customerType').value;
   const discountRate = config.customerTypes[customerType].discountRate;
   if (discountRate === null) { alert('其他客户需一事一议，本计算器暂不支持。'); return; }
 
-  const basePrice = config.personnelLevels[level].basePrice;
-  const baseTotal = basePrice * hours * discountRate;
+  const baseTotal = getBaseTotal(entries, discountRate);
+  const totalHours = getTotalHours(entries);
 
   const hasPremium = document.getElementById('p1').checked || document.getElementById('p2').checked || document.getElementById('p3').checked;
   const premiumRate = hasPremium ? (parseInt(document.getElementById('premiumRate').value) || 0) / 100 : 0;
@@ -193,10 +253,10 @@ function calculate() {
 
   let discountRateApplied = 1.0;
   let discountNote = '';
-  if (document.getElementById('discount20h').checked && hours >= 20) {
+  if (document.getElementById('discount20h').checked && totalHours >= 20) {
     discountRateApplied = 0.85;
     discountNote = '满20小时8.5折';
-  } else if (document.getElementById('discount10h').checked && hours >= 10) {
+  } else if (document.getElementById('discount10h').checked && totalHours >= 10) {
     discountRateApplied = 0.9;
     discountNote = '满10小时9折';
   } else if (document.getElementById('firstDeal').checked) {
@@ -207,19 +267,15 @@ function calculate() {
   const finalTotal = subTotal - discountAmount;
 
   const isMajor = hasPremium || finalTotal > 50000;
-  const isDiscount = document.getElementById('discount20h').checked || (document.getElementById('discount10h').checked && hours >= 10 && document.getElementById('firstDeal').checked && finalTotal < 10000);
-
   let approvalType, approver;
-  if (isDiscount && discountAmount > 0.15 * finalTotal) {
-    approvalType = '让利报价'; approver = '公司管理层';
-  } else if (isMajor) {
+  if (isMajor) {
     approvalType = '重大报价'; approver = '公司管理层';
   } else {
     approvalType = '标准报价'; approver = '业务线负责人';
   }
 
   const pricingDesc = [
-    { name: '基础价值（工作量）', applied: true, desc: `${hours}小时，${level}级人员` },
+    { name: '基础价值（工作量）', applied: true, desc: `${entries.length} 个岗位，共 ${totalHours} 小时` },
     { name: '溢价价值（稀缺性）', applied: document.getElementById('scarcity').value !== 'low', desc: document.getElementById('scarcity').options[document.getElementById('scarcity').selectedIndex].text },
     { name: '增量价值（创新溢价）', applied: document.getElementById('innovationPremium').checked || hasPremium, desc: hasPremium ? '满足溢价条件' : '标准服务' },
     { name: '长期价值（合作关系）', applied: document.getElementById('longTermValue').checked, desc: document.getElementById('longTermValue').checked ? '具备持续合作潜力' : '单次合作' },
@@ -232,8 +288,16 @@ function calculate() {
     <div class="result-row"><span class="label">审批人</span><span>${approver}</span></div>
   `;
 
+  document.getElementById('personnelCost').innerHTML = `
+    <div style="font-size:12px;color:#888;margin-bottom:6px;">人员费用明细</div>
+    ${entries.map(e => {
+      const price = config.personnelLevels[e.level].basePrice;
+      return `<div class="result-row"><span class="label">${config.personnelLevels[e.level].label} × ${e.count} 人 × ${e.hours} h</span><span>${fmt(price * e.count * e.hours)} 元</span></div>`;
+    }).join('')}
+    <div class="result-row" style="border-top:1px solid #ddd;padding-top:6px;margin-top:4px;"><span class="label">小计（${customerType} ${discountRate*100}%）</span><span>${fmt(baseTotal)} 元</span></div>
+  `;
+
   document.getElementById('breakdown').innerHTML = `
-    <div class="result-row"><span class="label">基准价格（${level} × ${customerType}）</span><span>${fmt(basePrice)} 元/h × ${hours}h × ${discountRate * 100}% = ${fmt(baseTotal)} 元</span></div>
     ${hasPremium ? `<div class="result-row"><span class="label">溢价（${premiumRate * 100}%）</span><span>+${fmt(premiumAmount)} 元</span></div>` : ''}
     ${discountAmount > 0 ? `<div class="result-row"><span class="label">让利（${discountNote}）</span><span>-${fmt(discountAmount)} 元</span></div>` : ''}
     <div class="result-row total"><span class="label">最终报价</span><span>${fmt(finalTotal)} 元</span></div>
@@ -246,12 +310,24 @@ function calculate() {
 
 function fmt(n) { return Math.round(n).toLocaleString(); }
 function resetForm() {
-  document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+  entries = [];
+  renderEntries();
+  document.querySelectorAll('select:not(.personnel-entry select)').forEach(s => s.selectedIndex = 0);
   document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
-  document.getElementById('hours').value = 44;
   document.getElementById('premiumRate').value = 40;
+  document.getElementById('projectName').value = '';
   document.getElementById('resultSection').classList.add('hidden');
+  document.getElementById('scarcity').value = 'medium';
+  document.getElementById('opportunityCost').value = 'high';
+  document.getElementById('p2').checked = true;
+  document.getElementById('p3').checked = true;
+  document.getElementById('discount10h').checked = true;
+  document.getElementById('firstDeal').checked = true;
+  document.getElementById('innovationPremium').checked = true;
+  document.getElementById('longTermValue').checked = true;
 }
+
+addEntry('chief', 1, 44);
 </script>
 </body>
 </html>
