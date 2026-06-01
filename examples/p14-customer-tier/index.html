@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>客户分级管理</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "Noto Sans SC", sans-serif; background: #f5f5f5; padding: 40px; color: #333; }
+.container { max-width: 860px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 32px; }
+h1 { font-size: 22px; margin-bottom: 4px; }
+.subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #e0e0e0; }
+.tab { padding: 8px 20px; cursor: pointer; border: none; background: none; font-size: 14px; color: #888; border-bottom: 2px solid transparent; }
+.tab.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 500; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.section { margin-bottom: 20px; }
+.section h2 { font-size: 15px; color: #1a1a1a; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+.form-group { margin-bottom: 8px; }
+.form-group label { display: block; font-size: 12px; color: #666; margin-bottom: 2px; }
+.form-group input, .form-group select { width: 100%; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+.form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.form-row .form-group { flex: 1; min-width: 140px; }
+.btn { padding: 6px 16px; background: #1a73e8; color: #fff; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; }
+.btn:hover { background: #1557b0; }
+.btn-sm { padding: 3px 10px; font-size: 11px; }
+.btn-success { background: #2e7d32; }
+.btn-warning { background: #e65100; }
+.btn-danger { background: #e53935; }
+.btn-secondary { background: #e8e8e8; color: #333; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #fafafa; font-weight: 500; color: #555; font-size: 11px; }
+.card { background: #f9f9f9; border-radius: 4px; padding: 12px; margin-bottom: 6px; }
+.tier-cards { display: flex; gap: 10px; flex-wrap: wrap; }
+.tier-card { flex: 1; min-width: 180px; padding: 14px; border-radius: 6px; }
+.tier-card .name { font-size: 15px; font-weight: 500; }
+.tier-card .inner { font-size: 12px; color: #555; margin-top: 2px; }
+.tier-card .benefits { margin-top: 8px; font-size: 11px; list-style: none; }
+.tier-card .benefits li { padding: 2px 0; }
+.tier-card.normal { background: #f5f5f5; border-top: 3px solid #999; }
+.tier-card.vip { background: #fff8e1; border-top: 3px solid #f9a825; }
+.tier-card.svip { background: #fff3e0; border-top: 3px solid #e65100; }
+.tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px; }
+.tag-green { background: #e8f5e9; color: #2e7d32; }
+.tag-yellow { background: #fff8e1; color: #f57f17; }
+.tag-orange { background: #fff3e0; color: #e65100; }
+.tag-red { background: #fce4ec; color: #c62828; }
+.tag-blue { background: #e3f2fd; color: #1565c0; }
+.empty-state { padding: 24px; text-align: center; color: #aaa; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>客户分级管理</h1>
+  <p class="subtitle">依据《量潮科技客户分级章程》实现。对外等级 + 对内分类 + 升降级管理。</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('tiers')">等级体系</button>
+    <button class="tab" onclick="switchTab('clients')">客户管理</button>
+    <button class="tab" onclick="switchTab('upgrade')">升降级</button>
+  </div>
+
+  <div id="tab-tiers" class="tab-content active">
+    <div class="section">
+      <h2>对外等级</h2>
+      <div class="tier-cards">
+        <div class="tier-card normal">
+          <div class="name">普通客户</div><div class="inner">SMB</div>
+          <ul class="benefits">
+            <li>✅ 标准服务</li>
+            <li>✅ 公开优惠</li>
+          </ul>
+        </div>
+        <div class="tier-card vip">
+          <div class="name">VIP 客户</div><div class="inner">LA</div>
+          <ul class="benefits">
+            <li>✅ 标准服务</li>
+            <li>✅ 会员价及专属优惠</li>
+            <li>✅ 适度定制化支持</li>
+            <li>✅ 专属服务团队</li>
+          </ul>
+        </div>
+        <div class="tier-card svip">
+          <div class="name">SVIP 客户</div><div class="inner">KA</div>
+          <ul class="benefits">
+            <li>✅ 更高折扣专属优惠</li>
+            <li>✅ 优先体验新产品</li>
+            <li>✅ 品牌曝光机会</li>
+            <li>✅ 专属客户经理</li>
+            <li>✅ 定制化方案与优先排期</li>
+            <li>✅ 高层定期拜访</li>
+            <li>✅ 参与产品规划</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <h2>内外对照</h2>
+      <table><tr><th>对外等级</th><th>对内分类</th><th>资源策略</th></tr>
+        <tr><td>普通客户</td><td><span class="tag tag-blue">SMB</span> 中小企业</td><td>标准化服务流程，批量管理</td></tr>
+        <tr><td>VIP 客户</td><td><span class="tag tag-yellow">LA</span> 大型客户</td><td>适度定制化，专属服务团队</td></tr>
+        <tr><td>SVIP 客户</td><td><span class="tag tag-orange">KA</span> 关键客户</td><td>最高资源配置，战略合作</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div id="tab-clients" class="tab-content">
+    <div class="section">
+      <h2>添加客户</h2>
+      <div class="form-row">
+        <div class="form-group"><label>客户名称</label><input type="text" id="clientName"></div>
+        <div class="form-group"><label>对外等级</label>
+          <select id="clientTier"><option value="普通">普通</option><option value="VIP">VIP</option><option value="SVIP">SVIP</option></select>
+        </div>
+        <div class="form-group"><label>合作时长（月）</label><input type="number" id="clientMonths" value="6" min="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>累计消费（元）</label><input type="number" id="clientSpend" value="10000" min="0"></div>
+        <div class="form-group"><label>推荐客户数</label><input type="number" id="clientReferrals" value="0" min="0"></div>
+      </div>
+      <button class="btn" onclick="addClient()">添加客户</button>
+    </div>
+    <div class="section">
+      <h2>客户列表</h2>
+      <div id="clientList"><div class="empty-state">暂无客户。</div></div>
+    </div>
+  </div>
+
+  <div id="tab-upgrade" class="tab-content">
+    <div class="section">
+      <h2>升降级评估</h2>
+      <p style="font-size:12px;color:#888;margin-bottom:8px;">选择客户，系统根据消费金额、合作时长、推荐贡献综合评估是否满足升级条件。</p>
+      <div id="upgradeList"><div class="empty-state">暂无客户。请先在「客户管理」页添加客户。</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const clients = [];
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[onclick*="${tab}"]`).classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab === 'upgrade') renderUpgrade();
+}
+
+function addClient() {
+  const name = document.getElementById('clientName').value.trim();
+  if (!name) { alert('请输入客户名称。'); return; }
+  clients.push({
+    id: Date.now(),
+    name,
+    tier: document.getElementById('clientTier').value,
+    months: parseInt(document.getElementById('clientMonths').value) || 0,
+    spend: parseInt(document.getElementById('clientSpend').value) || 0,
+    referrals: parseInt(document.getElementById('clientReferrals').value) || 0,
+    status: '正常'
+  });
+  document.getElementById('clientName').value = '';
+  renderClients();
+}
+
+function renderClients() {
+  const el = document.getElementById('clientList');
+  if (!clients.length) { el.innerHTML = '<div class="empty-state">暂无客户。</div>'; return; }
+  el.innerHTML = `<table><tr><th>客户</th><th>等级</th><th>分类</th><th>合作时长</th><th>累计消费</th><th>推荐</th><th>状态</th><th>操作</th></tr>
+    ${clients.map((c, i) => {
+      const innerClass = c.tier === 'SVIP' ? 'KA' : c.tier === 'VIP' ? 'LA' : 'SMB';
+      return `<tr>
+        <td>${c.name}</td>
+        <td><span class="tag ${c.tier === 'SVIP' ? 'tag-orange' : c.tier === 'VIP' ? 'tag-yellow' : ''}">${c.tier}</span></td>
+        <td><span class="tag tag-blue">${innerClass}</span></td>
+        <td>${c.months} 月</td>
+        <td>${c.spend.toLocaleString()} 元</td>
+        <td>${c.referrals} 个</td>
+        <td><span class="tag ${c.status === '正常' ? 'tag-green' : c.status === '已降级' ? 'tag-red' : 'tag-yellow'}">${c.status}</span></td>
+        <td><button class="btn btn-sm btn-danger" onclick="removeClient(${i})">移除</button></td>
+      </tr>`;
+    }).join('')}</table>`;
+}
+
+function removeClient(idx) {
+  clients.splice(idx, 1);
+  renderClients();
+}
+
+function renderUpgrade() {
+  const el = document.getElementById('upgradeList');
+  if (!clients.length) { el.innerHTML = '<div class="empty-state">暂无客户。</div>'; return; }
+
+  el.innerHTML = clients.map((c, i) => {
+    const canUpgrade = canUpgradeClient(c);
+    const shouldDowngrade = shouldDowngradeClient(c);
+    const nextTier = c.tier === '普通' ? 'VIP' : c.tier === 'VIP' ? 'SVIP' : null;
+
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><strong>${c.name}</strong> <span class="tag ${c.tier === 'SVIP' ? 'tag-orange' : c.tier === 'VIP' ? 'tag-yellow' : ''}">${c.tier}</span></div>
+        <div>
+          ${canUpgrade && nextTier ? `<button class="btn btn-sm btn-success" onclick="doUpgrade(${i})">升级至 ${nextTier}</button>` : ''}
+          ${shouldDowngrade ? `<button class="btn btn-sm btn-warning" onclick="doDowngrade(${i})">降级</button>` : ''}
+        </div>
+      </div>
+      <div style="font-size:11px;color:#888;margin-top:4px;">
+        消费 ${c.spend.toLocaleString()} 元 | ${c.months} 月 | 推荐 ${c.referrals} 人
+        ${canUpgrade && nextTier ? '<br><span style="color:#2e7d32;">✅ 满足升级条件</span>' : ''}
+        ${shouldDowngrade ? '<br><span style="color:#c62828;">⚠ 触发了降级条件</span>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function canUpgradeClient(c) {
+  if (c.tier === 'SVIP') return false;
+  const score = c.spend / 10000 * 2 + c.months * 0.5 + c.referrals * 3;
+  return score >= 10;
+}
+
+function shouldDowngradeClient(c) {
+  if (c.tier === '普通') return false;
+  if (c.months > 3 && c.spend < 1000) return true;
+  return false;
+}
+
+function doUpgrade(idx) {
+  const c = clients[idx];
+  if (!c) return;
+  const next = c.tier === '普通' ? 'VIP' : 'SVIP';
+  c.tier = next;
+  renderClients();
+  renderUpgrade();
+}
+
+function doDowngrade(idx) {
+  const c = clients[idx];
+  if (!c) return;
+  if (c.tier === 'VIP') c.tier = '普通';
+  else if (c.tier === 'SVIP') c.tier = 'VIP';
+  c.status = '已降级';
+  renderClients();
+  renderUpgrade();
+}
+</script>
+</body>
+</html>
