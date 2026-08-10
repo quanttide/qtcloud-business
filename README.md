@@ -11,6 +11,6 @@ src/studio/                – Flutter 客户端
   assets/data/           – JSON seed 数据
   test/                  – 组件测试
 docs/                      – 工作文档
-  prd/                     – 产品需求文档（报价制定、合同管理、产品边界）
+  dev-guide/                – 产品需求文档（报价制定、合同管理、产品边界）
 examples/                  – 示例与原型
 ```
