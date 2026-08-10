@@ -1,0 +1,113 @@
+{
+  "quotations": [
+    {
+      "id": "q-2026-001",
+      "_comment": "内部定价估算（量潮科技数字化 · 议事决议数据需求点）：成本法 5 阶段（采集0.5/建模1.0/导入1.5/治理1.0/报告1.0 人天）× 1000元/人天 ≈ 0.5 万元；市场法 ≈ 1.2 万元；内部价 = 市场价 × 7折 ≈ 0.8 万元",
+      "name": "议事决议数据需求点",
+      "client": "量潮科技（内部项目）",
+      "template": "数据服务报价单模板",
+      "status": "已确认",
+      "version": 3,
+      "created": "2026-07-20",
+      "updated": "2026-08-08",
+      "pricingNote": "成本法 ≈ 0.5 万元；市场法 ≈ 1.2 万元；内部价 = 市场价 × 7 折 ≈ 0.8 万元",
+      "products": [
+        {
+          "name": "议事决议数据 — 决议档案（示例）",
+          "unitPrice": 0.4,
+          "quantity": 1,
+          "discount": 1.0
+        },
+        {
+          "name": "议事决议数据 — 治理视图",
+          "unitPrice": 0.2,
+          "quantity": 1,
+          "discount": 1.0
+        },
+        {
+          "name": "周会决议汇总与历史批量整理",
+          "unitPrice": 0.2,
+          "quantity": 1,
+          "discount": 1.0
+        }
+      ],
+      "totalAmount": 0.8
+    },
+    {
+      "id": "q-2026-002",
+      "name": "数据治理基线服务（示例）",
+      "client": "示例客户",
+      "template": "数据服务报价单模板",
+      "status": "已发送",
+      "version": 1,
+      "created": "2026-08-05",
+      "updated": "2026-08-05",
+      "pricingNote": "市场法报价，待客户确认",
+      "products": [
+        {
+          "name": "质量基线报告（季度）",
+          "unitPrice": 1.5,
+          "quantity": 2,
+          "discount": 0.9
+        }
+      ],
+      "totalAmount": 2.7
+    }
+  ],
+  "contracts": [
+    {
+      "id": "c-2026-001",
+      "name": "议事决议数据服务合同",
+      "client": "量潮科技（内部项目）",
+      "template": "数据服务合同模板",
+      "status": "已签署",
+      "amount": 0.8,
+      "created": "2026-07-20",
+      "signed": "2026-07-25",
+      "fulfillments": [
+        {
+          "name": "首付款",
+          "status": "done",
+          "date": "2026-07-25"
+        },
+        {
+          "name": "决议档案交付",
+          "status": "done",
+          "date": "2026-08-01"
+        },
+        {
+          "name": "尾款",
+          "status": "todo",
+          "date": ""
+        }
+      ]
+    },
+    {
+      "id": "c-2026-002",
+      "name": "数据治理基线服务合同（示例）",
+      "client": "示例客户",
+      "template": "数据服务合同模板",
+      "status": "待签署",
+      "amount": 2.7,
+      "created": "2026-08-06",
+      "signed": "",
+      "fulfillments": [
+        {
+          "name": "发送签署",
+          "status": "active",
+          "date": "2026-08-06"
+        },
+        {
+          "name": "客户签署",
+          "status": "todo",
+          "date": ""
+        },
+        {
+          "name": "归档",
+          "status": "todo",
+          "date": ""
+        }
+      ]
+    }
+  ]
+}
