@@ -1,11 +1,11 @@
 {
-    "name": "qtcloud_business_studio",
-    "short_name": "qtcloud_business_studio",
+    "name": "量潮商务云",
+    "short_name": "量潮商务云",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "量潮商务云",
+    "background_color": "#F1F5F9",
+    "theme_color": "#4F46E5",
+    "description": "量潮商务云（qtcloud-business）—— 报价与合同管理",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
