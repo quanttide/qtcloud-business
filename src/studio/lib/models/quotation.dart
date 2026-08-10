@@ -12,9 +12,13 @@ class Quotation {
     required this.pricingNote,
     required this.products,
     required this.totalAmount,
+    required this.versions,
   });
 
   factory Quotation.fromJson(Map<String, dynamic> json) {
+    final versions = (json['versions'] as List<dynamic>? ?? [])
+        .map((e) => QuotationVersion.fromJson(e as Map<String, dynamic>))
+        .toList();
     return Quotation(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -29,6 +33,7 @@ class Quotation {
           .map((e) => QuotationProduct.fromJson(e as Map<String, dynamic>))
           .toList(),
       totalAmount: (json['totalAmount'] as num).toDouble(),
+      versions: versions,
     );
   }
 
@@ -43,6 +48,12 @@ class Quotation {
   final String pricingNote;
   final List<QuotationProduct> products;
   final double totalAmount;
+
+  /// 报价历史版本（降序：最新在前）
+  final List<QuotationVersion> versions;
+
+  /// 当前版本是否为最新
+  bool get isLatest => versions.isEmpty || versions.first.version == version;
 }
 
 /// 报价单产品明细（产品、单价、数量、折扣）
@@ -67,4 +78,31 @@ class QuotationProduct {
   final double unitPrice;
   final double quantity;
   final double discount;
+
+  /// 小计 = 单价 × 数量 × 折扣
+  double get subtotal => unitPrice * quantity * discount;
+}
+
+/// 报价历史版本记录
+class QuotationVersion {
+  const QuotationVersion({
+    required this.version,
+    required this.updated,
+    required this.totalAmount,
+    required this.note,
+  });
+
+  factory QuotationVersion.fromJson(Map<String, dynamic> json) {
+    return QuotationVersion(
+      version: json['version'] as int,
+      updated: json['updated'] as String,
+      totalAmount: (json['totalAmount'] as num).toDouble(),
+      note: json['note'] as String? ?? '',
+    );
+  }
+
+  final int version;
+  final String updated;
+  final double totalAmount;
+  final String note;
 }

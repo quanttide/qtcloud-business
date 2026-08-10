@@ -31,7 +31,27 @@
           "discount": 1.0
         }
       ],
-      "totalAmount": 0.8
+      "totalAmount": 0.8,
+      "versions": [
+        {
+          "version": 3,
+          "updated": "2026-08-08",
+          "totalAmount": 0.8,
+          "note": "确认后定稿"
+        },
+        {
+          "version": 2,
+          "updated": "2026-08-02",
+          "totalAmount": 0.9,
+          "note": "调整折扣（9 折 → 7 折）"
+        },
+        {
+          "version": 1,
+          "updated": "2026-07-20",
+          "totalAmount": 1.0,
+          "note": "初版报价"
+        }
+      ]
     },
     {
       "id": "q-2026-002",
@@ -51,7 +71,15 @@
           "discount": 0.9
         }
       ],
-      "totalAmount": 2.7
+      "totalAmount": 2.7,
+      "versions": [
+        {
+          "version": 1,
+          "updated": "2026-08-05",
+          "totalAmount": 2.7,
+          "note": "初版报价"
+        }
+      ]
     }
   ],
   "contracts": [
@@ -66,18 +94,23 @@
       "signed": "2026-07-25",
       "fulfillments": [
         {
-          "name": "首付款",
+          "name": "发送签署",
+          "status": "done",
+          "date": "2026-07-22"
+        },
+        {
+          "name": "客户签署",
           "status": "done",
           "date": "2026-07-25"
         },
         {
-          "name": "决议档案交付",
+          "name": "合同归档",
           "status": "done",
-          "date": "2026-08-01"
+          "date": "2026-07-26"
         },
         {
-          "name": "尾款",
-          "status": "todo",
+          "name": "履约跟踪",
+          "status": "active",
           "date": ""
         }
       ]
@@ -94,19 +127,105 @@
       "fulfillments": [
         {
           "name": "发送签署",
-          "status": "active",
+          "status": "done",
           "date": "2026-08-06"
         },
         {
           "name": "客户签署",
-          "status": "todo",
+          "status": "active",
           "date": ""
         },
         {
-          "name": "归档",
+          "name": "合同归档",
           "status": "todo",
           "date": ""
         }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "tpl-quote-data",
+      "type": "quotation",
+      "name": "数据服务报价单模板",
+      "description": "数据采集/建模/导入/治理/报告 标准报价单",
+      "products": [
+        {
+          "name": "数据采集（人天）",
+          "unitPrice": 0.1,
+          "quantity": 5,
+          "discount": 1.0
+        },
+        {
+          "name": "数据建模（人天）",
+          "unitPrice": 0.1,
+          "quantity": 10,
+          "discount": 1.0
+        },
+        {
+          "name": "数据导入与治理（人天）",
+          "unitPrice": 0.1,
+          "quantity": 25,
+          "discount": 1.0
+        },
+        {
+          "name": "报告输出（份）",
+          "unitPrice": 0.1,
+          "quantity": 5,
+          "discount": 1.0
+        }
+      ]
+    },
+    {
+      "id": "tpl-quote-soft",
+      "type": "quotation",
+      "name": "软件实施报价单模板",
+      "description": "软件部署/实施/培训/运维 标准报价单",
+      "products": [
+        {
+          "name": "软件授权（套）",
+          "unitPrice": 1.0,
+          "quantity": 1,
+          "discount": 1.0
+        },
+        {
+          "name": "部署实施（人天）",
+          "unitPrice": 0.2,
+          "quantity": 5,
+          "discount": 1.0
+        },
+        {
+          "name": "培训（场）",
+          "unitPrice": 0.3,
+          "quantity": 1,
+          "discount": 1.0
+        }
+      ]
+    },
+    {
+      "id": "tpl-contract-data",
+      "type": "contract",
+      "name": "数据服务合同模板",
+      "description": "标准数据服务合同条款",
+      "sections": [
+        "服务范围与交付物",
+        "交付标准与验收",
+        "合同金额与付款方式",
+        "数据安全与保密条款",
+        "违约责任与争议解决"
+      ]
+    },
+    {
+      "id": "tpl-contract-soft",
+      "type": "contract",
+      "name": "软件实施合同模板",
+      "description": "软件采购与实施标准合同",
+      "sections": [
+        "软件授权范围",
+        "实施服务内容",
+        "费用与付款方式",
+        "知识产权与保密",
+        "售后支持与维护"
       ]
     }
   ]

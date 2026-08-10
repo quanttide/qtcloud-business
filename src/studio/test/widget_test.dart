@@ -1,10 +1,26 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:qtcloud_business_studio/models/seed.dart';
+import 'package:qtcloud_business_studio/screens/contract_detail_screen.dart';
 import 'package:qtcloud_business_studio/screens/dashboard_screen.dart';
+import 'package:qtcloud_business_studio/screens/quotation_detail_screen.dart';
+import 'package:qtcloud_business_studio/screens/quotation_list_screen.dart';
+
+/// 从仓库 seed JSON 同步构造测试用 BusinessData。
+///
+/// widget 测试运行在包根目录（src/studio/），可直接读文件系统；
+/// 不走 rootBundle 以避免测试环境下的异步 IO future 悬挂。
+BusinessData loadTestSeed() {
+  final raw = File('assets/data/seed_business.json').readAsStringSync();
+  return BusinessData.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+}
 
 void main() {
-  testWidgets('仪表盘从 seed JSON 异步加载并渲染报价与合同', (tester) async {
+  testWidgets('仪表盘加载 seed 并渲染报价与合同', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: DashboardScreen()));
 
     // 初始加载态
@@ -17,21 +33,80 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('商务工作台'), findsOneWidget);
 
     // 统计卡片
     expect(find.text('报价总数'), findsOneWidget);
     expect(find.text('待签署'), findsWidgets); // 统计卡片 + 合同状态徽章
+    expect(find.text('已签署'), findsWidgets);
 
     // 报价与合同区块
     expect(find.text('报价（2）'), findsOneWidget);
     expect(find.text('合同（2）'), findsOneWidget);
-
-    // 报价条目（名称 + 版本）
-    expect(find.text('议事决议数据需求点  v3'), findsOneWidget);
-    expect(find.text('已确认'), findsWidgets);
-
-    // 合同条目
+    expect(find.text('议事决议数据需求点'), findsOneWidget);
     expect(find.text('议事决议数据服务合同'), findsOneWidget);
-    expect(find.text('已签署'), findsWidgets);
+  });
+
+  testWidgets('报价详情：产品明细、版本历史与导出（US1/US2）', (tester) async {
+    final data = loadTestSeed();
+    final quotation = data.quotations.first; // q-2026-001 v3 已确认
+    await tester.pumpWidget(
+      MaterialApp(home: QuotationDetailScreen(quotation: quotation)),
+    );
+    await tester.pumpAndSettle();
+
+    // 版本历史：当前版本 v3 + 历史版本
+    expect(find.text('版本历史'), findsOneWidget);
+    expect(find.text('当前'), findsOneWidget);
+    expect(find.text('v1'), findsOneWidget);
+    expect(find.text('初版报价'), findsOneWidget);
+
+    // 导出 PDF → 弹窗 → 下载提示
+    await tester.tap(find.text('导出'));
+    await tester.pumpAndSettle();
+    expect(find.text('导出报价单'), findsOneWidget);
+    expect(find.textContaining('.pdf'), findsOneWidget);
+
+    await tester.tap(find.text('下载'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('📥 下载'), findsOneWidget);
+  });
+
+  testWidgets('报价历史：按客户搜索（US2）', (tester) async {
+    final data = loadTestSeed();
+    await tester.pumpWidget(
+      MaterialApp(home: QuotationListScreen(quotations: data.quotations)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('共 2 份报价'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), '示例客户');
+    await tester.pump();
+
+    expect(find.text('共 1 份报价'), findsOneWidget);
+    expect(find.text('数据治理基线服务（示例）'), findsOneWidget);
+    expect(find.text('议事决议数据需求点'), findsNothing);
+  });
+
+  testWidgets('合同详情：签署进度与签署提醒（US4）', (tester) async {
+    final data = loadTestSeed();
+    final contract = data.contracts.last; // c-2026-002 待签署
+    await tester.pumpWidget(
+      MaterialApp(home: ContractDetailScreen(contract: contract)),
+    );
+    await tester.pumpAndSettle();
+
+    // 签署进度步骤（发送签署 done / 客户签署 active / 合同归档 todo）
+    expect(find.text('签署进度'), findsOneWidget);
+    expect(find.text('发送签署'), findsOneWidget);
+    expect(find.text('客户签署'), findsOneWidget);
+    expect(find.text('合同归档'), findsOneWidget);
+
+    // 待签署合同显示提醒按钮，点击发出提醒
+    expect(find.text('提醒客户签署'), findsOneWidget);
+    await tester.tap(find.text('提醒客户签署'));
+    await tester.pump();
+    expect(find.textContaining('🔔 已发送签署提醒'), findsOneWidget);
   });
 }
