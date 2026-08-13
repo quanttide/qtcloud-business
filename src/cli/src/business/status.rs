@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use super::{load_orders, BusinessStatus, OrderItem};
+use super::{BusinessStatus, OrderItem, load_orders};
 
 pub const STAGES: &[&str] = &["商机", "报价", "谈判", "签约"];
 

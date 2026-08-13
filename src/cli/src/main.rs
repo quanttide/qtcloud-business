@@ -1,6 +1,6 @@
 mod business;
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
 
 #[derive(Parser)]
 #[command(name = "qtcloud-business", version, about = "QtCloud Business CLI")]

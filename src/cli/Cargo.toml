@@ -3,6 +3,10 @@ name = "qtcloud-business-cli"
 version = "0.1.0"
 edition = "2024"
 description = "QtCloud Business CLI — 商务拓展总览与报价计算"
+license = "Apache-2.0"
+repository = "https://github.com/quanttide/qtcloud-business"
+homepage = "https://github.com/quanttide/qtcloud-business"
+documentation = "https://github.com/quanttide/qtcloud-business/tree/main/src/cli"
 
 [[bin]]
 name = "qtcloud-business"
