@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../models/business.dart';
+import '../models/quotation.dart';
+import '../models/store.dart';
 import '../models/template.dart';
 import '../widgets/common/responsive.dart';
 import '../widgets/common/toast.dart';
 import '../widgets/dialogs/export_dialog.dart';
 
 /// 新建报价（US1）：选择方案模板 → 填充客户信息 → 调整产品明细和价格 → 导出 PDF
+/// 传入 business 时即"从业务发起报价"：按业务报价规则预填明细
 class QuotationEditScreen extends StatefulWidget {
   final List<BusinessTemplate> quotationTemplates;
+  final Business? business;
 
-  const QuotationEditScreen({super.key, required this.quotationTemplates});
+  const QuotationEditScreen({
+    super.key,
+    required this.quotationTemplates,
+    this.business,
+  });
 
   @override
   State<QuotationEditScreen> createState() => _QuotationEditScreenState();
@@ -26,7 +35,22 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
   void initState() {
     super.initState();
     _rows = [];
-    if (widget.quotationTemplates.isNotEmpty) {
+    final business = widget.business;
+    if (business != null) {
+      // 从业务发起：代入业务的报价规则（阶段工时 × 人天单价）
+      _rows.addAll(
+        BusinessStore.productsFromRule(
+          business.pricingRule,
+        ).map(
+          (p) => _ProductRow(
+            name: p.name,
+            price: p.unitPrice,
+            qty: p.quantity,
+            discount: p.discount,
+          ),
+        ),
+      );
+    } else if (widget.quotationTemplates.isNotEmpty) {
       _applyTemplate(widget.quotationTemplates.first);
     }
   }
@@ -80,7 +104,48 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       showAppToast(context, '请至少添加一条产品明细');
       return;
     }
-    showAppToast(context, '✅ 报价单已保存（v1，待发送）');
+    final business = widget.business;
+    final products = _rows
+        .where((r) => r.nameCtrl.text.trim().isNotEmpty)
+        .map(
+          (r) => QuotationProduct(
+            name: r.nameCtrl.text.trim(),
+            unitPrice: r.price,
+            quantity: r.qty,
+            discount: r.discount,
+          ),
+        )
+        .toList();
+    final now = DateTime.now().toIso8601String().substring(0, 10);
+    BusinessStore.instance.addQuotation(
+      Quotation(
+        id: BusinessStore.instance.nextQuotationId(),
+        businessId: business?.id ?? '',
+        name: _nameCtrl.text.trim().isEmpty
+            ? '$client · 报价单'
+            : _nameCtrl.text.trim(),
+        client: client,
+        template: _template?.name ?? '',
+        status: '草稿',
+        version: 1,
+        created: now,
+        updated: now,
+        pricingNote: business == null
+            ? ''
+            : '按业务「${business.name}」报价规则核算，毛利底线 ${(business.pricingRule.minGrossMargin * 100).toStringAsFixed(0)}%',
+        products: products,
+        totalAmount: _total,
+        versions: [
+          QuotationVersion(
+            version: 1,
+            updated: now,
+            totalAmount: _total,
+            note: '初版报价',
+          ),
+        ],
+      ),
+    );
+    showAppToast(context, '✅ 报价单已保存（v1 草稿）');
     Navigator.of(context).pop();
   }
 
@@ -130,9 +195,9 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const Text(
-              '新建报价',
-              style: TextStyle(
+            Text(
+              widget.business == null ? '新建报价' : '从业务发起报价',
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF1E293B),
@@ -141,11 +206,43 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
           ],
         ),
         const SizedBox(height: 16),
+        // 所属业务
+        if (widget.business != null) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E7FF),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.business_center_outlined,
+                  size: 16,
+                  color: Color(0xFF4F46E5),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '所属业务：${widget.business!.name} · 人天单价 ${widget.business!.pricingRule.unitPrice.toStringAsFixed(2)} 万元 · 毛利底线 ${(widget.business!.pricingRule.minGrossMargin * 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF3730A3),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         // 模板选择
-        _sectionTitle('方案模板'),
-        const SizedBox(height: 8),
-        _buildTemplatePicker(),
-        const SizedBox(height: 16),
+        if (widget.business == null) ...[
+          _sectionTitle('方案模板'),
+          const SizedBox(height: 8),
+          _buildTemplatePicker(),
+          const SizedBox(height: 16),
+        ],
         // 客户信息
         _sectionTitle('客户信息'),
         const SizedBox(height: 8),
@@ -409,5 +506,9 @@ class _ProductRow {
 
   double _num(TextEditingController c) => double.tryParse(c.text.trim()) ?? 0;
 
-  double get subtotal => _num(priceCtrl) * _num(qtyCtrl) * _num(discountCtrl);
+  double get price => _num(priceCtrl);
+  double get qty => _num(qtyCtrl);
+  double get discount => _num(discountCtrl);
+
+  double get subtotal => price * qty * discount;
 }

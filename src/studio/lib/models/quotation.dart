@@ -2,6 +2,7 @@
 class Quotation {
   const Quotation({
     required this.id,
+    required this.businessId,
     required this.name,
     required this.client,
     required this.template,
@@ -21,6 +22,7 @@ class Quotation {
         .toList();
     return Quotation(
       id: json['id'] as String,
+      businessId: json['businessId'] as String? ?? '',
       name: json['name'] as String,
       client: json['client'] as String,
       template: json['template'] as String? ?? '',
@@ -38,6 +40,9 @@ class Quotation {
   }
 
   final String id;
+
+  /// 所属业务 id（订单是业务的实例）
+  final String businessId;
   final String name;
   final String client;
   final String template;

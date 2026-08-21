@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../models/quotation.dart';
+import '../models/store.dart';
 import '../widgets/cards/quotation_card.dart';
 import '../widgets/common/responsive.dart';
 import '../widgets/common/sidebar.dart';
 import 'quotation_detail_screen.dart';
 
 /// 报价历史列表：支持按客户搜索（US2）
+/// quotations 传 null 时从会话存储加载（含新建报价）
 class QuotationListScreen extends StatefulWidget {
-  final List<Quotation> quotations;
+  final List<Quotation>? quotations;
 
-  const QuotationListScreen({super.key, required this.quotations});
+  const QuotationListScreen({super.key, this.quotations});
 
   @override
   State<QuotationListScreen> createState() => _QuotationListScreenState();
@@ -18,11 +20,25 @@ class QuotationListScreen extends StatefulWidget {
 
 class _QuotationListScreenState extends State<QuotationListScreen> {
   String _query = '';
+  List<Quotation>? _loaded;
+
+  List<Quotation> get _items => widget.quotations ?? _loaded ?? const [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.quotations == null) {
+      BusinessStore.instance.load().then((_) {
+        if (!mounted) return;
+        setState(() => _loaded = BusinessStore.instance.data.quotations);
+      });
+    }
+  }
 
   List<Quotation> get _filtered {
     final q = _query.trim();
-    if (q.isEmpty) return widget.quotations;
-    return widget.quotations.where((item) => item.client.contains(q)).toList();
+    if (q.isEmpty) return _items.toList();
+    return _items.where((item) => item.client.contains(q)).toList();
   }
 
   @override
@@ -35,11 +51,10 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
           desktop: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Sidebar(),
+              const Sidebar(route: '/quotations'),
               Expanded(child: _buildBody(context, compact: false)),
             ],
-          ),
-        ),
+          ),        ),
       ),
     );
   }

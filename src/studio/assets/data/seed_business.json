@@ -1,8 +1,65 @@
 {
+  "businesses": [
+    {
+      "id": "biz-data",
+      "name": "数据服务",
+      "description": "数据采集、建模、导入、治理、报告的定制数据服务",
+      "status": "在营",
+      "created": "2026-06-01",
+      "updated": "2026-08-08",
+      "pricingRule": {
+        "unitPrice": 0.1,
+        "minGrossMargin": 0.3,
+        "paymentTerms": "签约 50%，交付验收后 50%",
+        "stageDefaults": [
+          { "name": "数据采集", "workload": 0.5 },
+          { "name": "数据建模", "workload": 1.0 },
+          { "name": "数据导入", "workload": 1.5 },
+          { "name": "数据治理", "workload": 1.0 },
+          { "name": "报告输出", "workload": 1.0 }
+        ]
+      }
+    },
+    {
+      "id": "biz-soft",
+      "name": "软件实施",
+      "description": "软件授权、部署实施、培训与运维",
+      "status": "在营",
+      "created": "2026-06-01",
+      "updated": "2026-08-01",
+      "pricingRule": {
+        "unitPrice": 0.2,
+        "minGrossMargin": 0.35,
+        "paymentTerms": "签约 40%，上线 40%，验收 20%",
+        "stageDefaults": [
+          { "name": "部署实施", "workload": 5.0 },
+          { "name": "培训", "workload": 1.0 }
+        ]
+      }
+    },
+    {
+      "id": "biz-course",
+      "name": "课程定制",
+      "description": "面向高校与企业的定制课程开发（观望中）",
+      "status": "观望",
+      "created": "2026-07-15",
+      "updated": "2026-08-10",
+      "pricingRule": {
+        "unitPrice": 0.15,
+        "minGrossMargin": 0.4,
+        "paymentTerms": "策划书确认 30%，交付 70%",
+        "stageDefaults": [
+          { "name": "课程设计", "workload": 3.0 },
+          { "name": "内容制作", "workload": 5.0 }
+        ]
+      }
+    }
+  ],
   "quotations": [
     {
       "id": "q-2026-001",
       "_comment": "内部定价估算（量潮科技数字化 · 议事决议数据需求点）：成本法 5 阶段（采集0.5/建模1.0/导入1.5/治理1.0/报告1.0 人天）× 1000元/人天 ≈ 0.5 万元；市场法 ≈ 1.2 万元；内部价 = 市场价 × 7折 ≈ 0.8 万元",
+      "businessId": "biz-data",
       "name": "议事决议数据需求点",
       "client": "量潮科技（内部项目）",
       "template": "数据服务报价单模板",
@@ -55,6 +112,7 @@
     },
     {
       "id": "q-2026-002",
+      "businessId": "biz-data",
       "name": "数据治理基线服务（示例）",
       "client": "示例客户",
       "template": "数据服务报价单模板",
@@ -85,6 +143,7 @@
   "contracts": [
     {
       "id": "c-2026-001",
+      "businessId": "biz-data",
       "name": "议事决议数据服务合同",
       "client": "量潮科技（内部项目）",
       "template": "数据服务合同模板",
@@ -117,6 +176,7 @@
     },
     {
       "id": "c-2026-002",
+      "businessId": "biz-data",
       "name": "数据治理基线服务合同（示例）",
       "client": "示例客户",
       "template": "数据服务合同模板",

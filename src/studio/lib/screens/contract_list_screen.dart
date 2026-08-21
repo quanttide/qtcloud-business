@@ -1,16 +1,18 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../models/contract.dart';
+import '../models/store.dart';
 import '../widgets/cards/contract_card.dart';
 import '../widgets/common/responsive.dart';
 import '../widgets/common/sidebar.dart';
 import 'contract_detail_screen.dart';
 
 /// 合同列表：按状态筛选（待签署/已签署/已归档，US4）
+/// contracts 传 null 时从会话存储加载
 class ContractListScreen extends StatefulWidget {
-  final List<Contract> contracts;
+  final List<Contract>? contracts;
 
-  const ContractListScreen({super.key, required this.contracts});
+  const ContractListScreen({super.key, this.contracts});
 
   @override
   State<ContractListScreen> createState() => _ContractListScreenState();
@@ -18,12 +20,26 @@ class ContractListScreen extends StatefulWidget {
 
 class _ContractListScreenState extends State<ContractListScreen> {
   String _filter = '全部';
+  List<Contract>? _loaded;
 
   static const _filters = ['全部', '待签署', '已签署', '已归档'];
 
+  List<Contract> get _items => widget.contracts ?? _loaded ?? const [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.contracts == null) {
+      BusinessStore.instance.load().then((_) {
+        if (!mounted) return;
+        setState(() => _loaded = BusinessStore.instance.data.contracts);
+      });
+    }
+  }
+
   List<Contract> get _filtered {
-    if (_filter == '全部') return widget.contracts;
-    return widget.contracts.where((c) => c.status == _filter).toList();
+    if (_filter == '全部') return _items.toList();
+    return _items.where((c) => c.status == _filter).toList();
   }
 
   @override
@@ -36,7 +52,7 @@ class _ContractListScreenState extends State<ContractListScreen> {
           desktop: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Sidebar(),
+              const Sidebar(route: '/contracts'),
               Expanded(child: _buildBody(context, compact: false)),
             ],
           ),

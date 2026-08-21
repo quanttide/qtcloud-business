@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'screens/business_list_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/quotation_list_screen.dart';
+import 'screens/contract_list_screen.dart';
 
 void main() {
   runApp(const _App());
@@ -24,7 +27,13 @@ class _App extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Inter',
       ),
-      home: const DashboardScreen(),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => const DashboardScreen(),
+        '/businesses': (_) => const BusinessListScreen(),
+        '/quotations': (_) => const QuotationListScreen(),
+        '/contracts': (_) => const ContractListScreen(),
+      },
     );
   }
 }

@@ -1,10 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
+import '../models/business.dart';
 import '../models/seed.dart';
+import '../models/store.dart';
 import '../widgets/cards/contract_card.dart';
 import '../widgets/cards/quotation_card.dart';
 import '../widgets/common/responsive.dart';
 import '../widgets/common/sidebar.dart';
+import 'business_detail_screen.dart';
+import 'business_edit_screen.dart';
 import 'contract_detail_screen.dart';
 import 'contract_edit_screen.dart';
 import 'contract_list_screen.dart';
@@ -32,14 +36,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _load() async {
     try {
-      final data = await loadSeedBusiness();
+      await BusinessStore.instance.load();
       if (!mounted) return;
-      setState(() => _data = data);
+      setState(() => _data = BusinessStore.instance.data);
     } catch (e) {
       debugPrint('种子数据加载失败: $e');
       if (!mounted) return;
       setState(() => _loadFailed = true);
     }
+  }
+
+  /// 打开页面，返回后刷新（新建的数据要立刻可见）
+  Future<void> _open(Future<void> Function() push) async {
+    await push();
+    if (mounted) setState(() => _data = BusinessStore.instance.data);
   }
 
   @override
@@ -107,13 +117,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _buildStatCards(data),
         const SizedBox(height: 16),
         _buildSectionHeader(
+          '业务',
+          count: data.businesses.length,
+          onNew: () => _open(
+            () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const BusinessEditScreen()),
+            ),
+          ),
+          onViewAll: () => _openBusinesses(),
+        ),
+        const SizedBox(height: 8),
+        ...data.businesses.map(
+          (b) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _DashboardBusinessCard(
+              business: b,
+              contractCount: data.contractsOf(b.id).length,
+              onTap: () => _openDetail(
+                BusinessDetailScreen(business: b, data: data),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildSectionHeader(
           '报价',
           count: data.quotations.length,
-          onNew: () => _openEdit(
-            QuotationEditScreen(quotationTemplates: data.quotationTemplates),
+          onNew: () => _open(
+            () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => QuotationEditScreen(
+                  quotationTemplates: data.quotationTemplates,
+                ),
+              ),
+            ),
           ),
-          onViewAll: () =>
-              _openList(QuotationListScreen(quotations: data.quotations)),
+          onViewAll: () => _open(
+            () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => QuotationListScreen(quotations: data.quotations),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         ...data.quotations.map(
@@ -129,11 +174,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _buildSectionHeader(
           '合同',
           count: data.contracts.length,
-          onNew: () => _openEdit(
-            ContractEditScreen(contractTemplates: data.contractTemplates),
+          onNew: () => _open(
+            () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    ContractEditScreen(contractTemplates: data.contractTemplates),
+              ),
+            ),
           ),
-          onViewAll: () =>
-              _openList(ContractListScreen(contracts: data.contracts)),
+          onViewAll: () => _open(
+            () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ContractListScreen(contracts: data.contracts),
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 8),
         ...data.contracts.map(
@@ -211,7 +266,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildSectionHeader(
     String title, {
     required int count,
-    required VoidCallback onNew,
+    VoidCallback? onNew,
     required VoidCallback onViewAll,
   }) {
     return Row(
@@ -229,26 +284,99 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onPressed: onViewAll,
           child: const Text('查看全部', style: TextStyle(fontSize: 12)),
         ),
-        const SizedBox(width: 4),
-        FilledButton.icon(
-          onPressed: onNew,
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF4F46E5),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            visualDensity: VisualDensity.compact,
+        if (onNew != null) ...[
+          const SizedBox(width: 4),
+          FilledButton.icon(
+            onPressed: onNew,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF4F46E5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.add, size: 16),
+            label: Text('新建$title'),
           ),
-          icon: const Icon(Icons.add, size: 16),
-          label: Text('新建$title'),
-        ),
+        ],
       ],
     );
+  }
+
+  void _openBusinesses() {
+    Navigator.of(context).pushReplacementNamed('/businesses');
   }
 
   void _openDetail(Widget screen) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
+}
 
-  void _openList(Widget screen) => _openDetail(screen);
+/// 工作台业务卡片：业务概览入口
+class _DashboardBusinessCard extends StatelessWidget {
+  final Business business;
+  final int contractCount;
+  final VoidCallback onTap;
 
-  void _openEdit(Widget screen) => _openDetail(screen);
+  const _DashboardBusinessCard({
+    required this.business,
+    required this.contractCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFF1F5F9)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0E7FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.business_center_outlined,
+                size: 19,
+                color: Color(0xFF4F46E5),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${business.name}（${business.status}）',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '订单 $contractCount · 人天单价 ${business.pricingRule.unitPrice.toStringAsFixed(2)} 万元 · 毛利底线 ${(business.pricingRule.minGrossMargin * 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, size: 20, color: Color(0xFFCBD5E1)),
+          ],
+        ),
+      ),
+    );
+  }
 }

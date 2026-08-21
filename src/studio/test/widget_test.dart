@@ -40,10 +40,28 @@ void main() {
     expect(find.text('待签署'), findsWidgets); // 统计卡片 + 合同状态徽章
     expect(find.text('已签署'), findsWidgets);
 
-    // 报价与合同区块
+    // 业务区块（业务是类，订单是实例）
+    expect(find.text('业务（3）'), findsOneWidget);
+    expect(find.text('数据服务（在营）'), findsOneWidget);
+
+    // 报价与合同区块在业务卡片下方，逐段滚动断言
+    final listScrollable = find
+        .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(
+      find.text('议事决议数据需求点'),
+      250,
+      scrollable: listScrollable,
+    );
     expect(find.text('报价（2）'), findsOneWidget);
-    expect(find.text('合同（2）'), findsOneWidget);
     expect(find.text('议事决议数据需求点'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('议事决议数据服务合同'),
+      250,
+      scrollable: listScrollable,
+    );
+    expect(find.text('合同（2）'), findsOneWidget);
     expect(find.text('议事决议数据服务合同'), findsOneWidget);
   });
 
