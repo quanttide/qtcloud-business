@@ -42,4 +42,13 @@ class BusinessTemplate {
 
   bool get isQuotation => type == typeQuotation;
   bool get isContract => type == typeContract;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': type,
+    'name': name,
+    'description': description,
+    'products': products.map((e) => e.toJson()).toList(),
+    'sections': sections,
+  };
 }

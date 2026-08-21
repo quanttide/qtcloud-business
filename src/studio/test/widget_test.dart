@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:qtcloud_business_studio/models/contract.dart';
 import 'package:qtcloud_business_studio/models/seed.dart';
 import 'package:qtcloud_business_studio/screens/contract_detail_screen.dart';
 import 'package:qtcloud_business_studio/screens/dashboard_screen.dart';
@@ -121,10 +122,47 @@ void main() {
     expect(find.text('客户签署'), findsOneWidget);
     expect(find.text('合同归档'), findsOneWidget);
 
-    // 待签署合同显示提醒按钮，点击发出提醒
+    // 待签署合同显示提醒按钮（页面较长，先滚动到按钮再点）
+    await tester.ensureVisible(find.text('提醒客户签署'));
+    await tester.pumpAndSettle();
     expect(find.text('提醒客户签署'), findsOneWidget);
     await tester.tap(find.text('提醒客户签署'));
     await tester.pump();
     expect(find.textContaining('🔔 已发送签署提醒'), findsOneWidget);
+  });
+
+  testWidgets('合同详情：付款到账打勾记录日期', (tester) async {
+    const contract = Contract(
+      id: 'c-test',
+      businessId: 'biz-data',
+      name: '测试合同',
+      client: '测试客户',
+      template: '',
+      status: '已签署',
+      amount: 10,
+      created: '2026-08-21',
+      signed: '2026-08-21',
+      fulfillments: [],
+      payments: [
+        PaymentNode(name: '签约款', ratio: 0.5),
+        PaymentNode(name: '尾款', ratio: 0.5),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: ContractDetailScreen(contract: contract)),
+    );
+    await tester.pumpAndSettle();
+
+    // 初始：0 笔到账
+    expect(find.text('已到账 0.00 万元 / 共 10.0 万元'), findsOneWidget);
+    expect(find.text('签约款'), findsOneWidget);
+    expect(find.text('未到账'), findsWidgets);
+
+    // 勾选第一笔：到账金额更新、日期自动记录
+    await tester.tap(find.text('签约款'));
+    await tester.pumpAndSettle();
+    expect(find.text('已到账 5.00 万元 / 共 10.0 万元'), findsOneWidget);
+    expect(find.text('1/2 笔'), findsOneWidget);
+    expect(find.textContaining('2026-'), findsWidgets);
   });
 }

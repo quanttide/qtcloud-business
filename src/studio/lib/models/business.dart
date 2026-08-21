@@ -39,6 +39,16 @@ class Business {
 
   final String created;
   final String updated;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'description': description,
+    'status': status,
+    'pricingRule': pricingRule.toJson(),
+    'created': created,
+    'updated': updated,
+  };
 }
 
 /// 报价规则：定义在业务上，订单实例化时代入参数执行
@@ -76,6 +86,13 @@ class PricingRule {
   /// 成本法估算总价（万元）= Σ(阶段工时 × 人天单价)
   double get costEstimate =>
       stageDefaults.fold(0.0, (sum, s) => sum + s.workload * unitPrice);
+
+  Map<String, dynamic> toJson() => {
+    'unitPrice': unitPrice,
+    'stageDefaults': stageDefaults.map((e) => e.toJson()).toList(),
+    'minGrossMargin': minGrossMargin,
+    'paymentTerms': paymentTerms,
+  };
 }
 
 /// 阶段工时基线（采集/建模/导入/治理/报告等）
@@ -96,6 +113,8 @@ class StageDefault {
 
   /// 工时基线（人天）
   final double workload;
+
+  Map<String, dynamic> toJson() => {'name': name, 'workload': workload};
 }
 
 /// 业务经营状态常量

@@ -59,6 +59,22 @@ class Quotation {
 
   /// 当前版本是否为最新
   bool get isLatest => versions.isEmpty || versions.first.version == version;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'businessId': businessId,
+    'name': name,
+    'client': client,
+    'template': template,
+    'status': status,
+    'version': version,
+    'created': created,
+    'updated': updated,
+    'pricingNote': pricingNote,
+    'products': products.map((e) => e.toJson()).toList(),
+    'totalAmount': totalAmount,
+    'versions': versions.map((e) => e.toJson()).toList(),
+  };
 }
 
 /// 报价单产品明细（产品、单价、数量、折扣）
@@ -86,6 +102,13 @@ class QuotationProduct {
 
   /// 小计 = 单价 × 数量 × 折扣
   double get subtotal => unitPrice * quantity * discount;
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'unitPrice': unitPrice,
+    'quantity': quantity,
+    'discount': discount,
+  };
 }
 
 /// 报价历史版本记录
@@ -110,4 +133,11 @@ class QuotationVersion {
   final String updated;
   final double totalAmount;
   final String note;
+
+  Map<String, dynamic> toJson() => {
+    'version': version,
+    'updated': updated,
+    'totalAmount': totalAmount,
+    'note': note,
+  };
 }

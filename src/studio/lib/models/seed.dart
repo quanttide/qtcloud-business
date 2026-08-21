@@ -57,6 +57,13 @@ class BusinessData {
 
   List<Contract> contractsOf(String businessId) =>
       contracts.where((c) => c.businessId == businessId).toList();
+
+  Map<String, dynamic> toJson() => {
+    'businesses': businesses.map((e) => e.toJson()).toList(),
+    'quotations': quotations.map((e) => e.toJson()).toList(),
+    'contracts': contracts.map((e) => e.toJson()).toList(),
+    'templates': templates.map((e) => e.toJson()).toList(),
+  };
 }
 
 /// 从 seed JSON 异步加载商务数据（业务、报价、合同、模板）

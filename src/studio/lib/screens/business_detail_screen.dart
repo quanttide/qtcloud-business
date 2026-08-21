@@ -7,6 +7,7 @@ import '../widgets/cards/contract_card.dart';
 import '../widgets/cards/quotation_card.dart';
 import '../widgets/common/responsive.dart';
 import 'contract_detail_screen.dart';
+import 'contract_edit_screen.dart';
 import 'quotation_detail_screen.dart';
 import 'quotation_edit_screen.dart';
 
@@ -83,6 +84,31 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                 ),
               ),
               const Spacer(),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ContractEditScreen(
+                        contractTemplates:
+                            BusinessStore.instance.data.contractTemplates,
+                        business: business,
+                      ),
+                    ),
+                  );
+                  if (context.mounted) setState(() {});
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF4F46E5),
+                  side: const BorderSide(color: Color(0xFFC7D2FE)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                ),
+                icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                label: const Text('登记合同'),
+              ),
+              const SizedBox(width: 8),
               FilledButton.icon(
                 onPressed: () async {
                   await Navigator.of(context).push(
