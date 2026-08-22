@@ -193,17 +193,28 @@ class BusinessStore {
     return nodes;
   }
 
-  /// 按业务报价规则生成产品明细（成本法：阶段工时 × 人天单价）
-  static List<QuotationProduct> productsFromRule(PricingRule rule) {
-    return rule.stageDefaults
-        .map(
-          (s) => QuotationProduct(
-            name: '${s.name}（${s.workload.toStringAsFixed(1)} 人天）',
-            unitPrice: rule.unitPrice,
-            quantity: s.workload,
-            discount: 1.0,
-          ),
-        )
-        .toList();
+  /// 按业务报价规则生成产品明细
+  /// 工时公式：阶段基线工时 × 难度系数 × 量级系数；单价 = 人天单价
+  static List<QuotationProduct> productsFromRule(
+    PricingRule rule, {
+    FactorLevel? difficulty,
+    FactorLevel? scale,
+  }) {
+    final d = difficulty;
+    final s = scale;
+    return rule.stageDefaults.map((stage) {
+      final hours = (d == null && s == null)
+          ? stage.workload
+          : rule.stageHours(stage, d ?? const FactorLevel(name: '', factor: 1.0),
+              s ?? const FactorLevel(name: '', factor: 1.0));
+      return QuotationProduct(
+        name: hours == stage.workload
+            ? '${stage.name}（${hours.toStringAsFixed(1)} 人天）'
+            : '${stage.name}（基线 ${stage.workload.toStringAsFixed(1)} → ${hours.toStringAsFixed(1)} 人天）',
+        unitPrice: rule.unitPrice,
+        quantity: hours,
+        discount: 1.0,
+      );
+    }).toList();
   }
 }

@@ -31,28 +31,62 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
   BusinessTemplate? _template;
   late final List<_ProductRow> _rows;
 
+  /// 从业务发起时选中的难度 / 量级档位（工时公式参数）
+  FactorLevel? _difficulty;
+  FactorLevel? _scale;
+
+  /// 业务规则没写清 → 拦截进入订单执行
+  bool get _ruleBlocked =>
+      widget.business != null && !widget.business!.isRuleComplete;
+
   @override
   void initState() {
     super.initState();
     _rows = [];
     final business = widget.business;
     if (business != null) {
-      // 从业务发起：代入业务的报价规则（阶段工时 × 人天单价）
-      _rows.addAll(
-        BusinessStore.productsFromRule(
-          business.pricingRule,
-        ).map(
-          (p) => _ProductRow(
-            name: p.name,
-            price: p.unitPrice,
-            qty: p.quantity,
-            discount: p.discount,
+      if (business.isRuleComplete) {
+        FactorLevel? pick(List<FactorLevel> levels) =>
+            levels.isEmpty ? null : levels[levels.length > 1 ? 1 : 0];
+        // 默认取中间档位（如 低/中/高 → 中）
+        _difficulty = pick(business.pricingRule.difficultyLevels);
+        _scale = pick(business.pricingRule.scaleLevels);
+        // 从业务发起：代入业务的报价规则（工时公式算出各阶段人天）
+        _rows.addAll(
+          BusinessStore.productsFromRule(
+            business.pricingRule,
+            difficulty: _difficulty,
+            scale: _scale,
+          ).map(
+            (p) => _ProductRow(
+              name: p.name,
+              price: p.unitPrice,
+              qty: p.quantity,
+              discount: p.discount,
+            ),
           ),
-        ),
-      );
+        );
+      }
     } else if (widget.quotationTemplates.isNotEmpty) {
       _applyTemplate(widget.quotationTemplates.first);
     }
+  }
+
+  /// 切换难度/量级后按工时公式重算明细（保留已改的单价与折扣）
+  void _applyFactors() {
+    final business = widget.business;
+    if (business == null || _difficulty == null || _scale == null) return;
+    final fresh = BusinessStore.productsFromRule(
+      business.pricingRule,
+      difficulty: _difficulty,
+      scale: _scale,
+    );
+    setState(() {
+      for (var i = 0; i < fresh.length && i < _rows.length; i++) {
+        _rows[i].nameCtrl.text = fresh[i].name;
+        _rows[i].qtyCtrl.text = fresh[i].quantity.toStringAsFixed(1);
+      }
+    });
   }
 
   @override
@@ -94,6 +128,18 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
     return sum;
   }
 
+  /// 定价说明：写明工时公式代入的难度/量级参数，报价可复核
+  String get _pricingNote {
+    final business = widget.business;
+    if (business == null) return '';
+    final factors = (_difficulty != null || _scale != null)
+        ? '（难度 ${_difficulty?.name ?? '-'} ×${_difficulty?.factor.toStringAsFixed(1) ?? '-'}'
+            ' · 量级 ${_scale?.name ?? '-'} ×${_scale?.factor.toStringAsFixed(1) ?? '-'}）'
+        : '';
+    return '按业务「${business.name}」报价规则核算$factors，'
+        '毛利底线 ${(business.pricingRule.minGrossMargin * 100).toStringAsFixed(0)}%';
+  }
+
   void _save() {
     final client = _clientCtrl.text.trim();
     if (client.isEmpty) {
@@ -130,9 +176,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
         version: 1,
         created: now,
         updated: now,
-        pricingNote: business == null
-            ? ''
-            : '按业务「${business.name}」报价规则核算，毛利底线 ${(business.pricingRule.minGrossMargin * 100).toStringAsFixed(0)}%',
+        pricingNote: _pricingNote,
         products: products,
         totalAmount: _total,
         versions: [
@@ -264,71 +308,187 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
           const SizedBox(height: 16),
         ],
         // 模板选择
-        if (widget.business == null) ...[
+        if (widget.business == null && !_ruleBlocked) ...[
           _sectionTitle('方案模板'),
           const SizedBox(height: 8),
           _buildTemplatePicker(),
           const SizedBox(height: 16),
         ],
-        // 客户信息
-        _sectionTitle('客户信息'),
-        const SizedBox(height: 8),
-        _buildInfoCard(
-          children: [
-            TextField(
-              controller: _nameCtrl,
-              decoration: _inputDecoration('报价名称（选填）'),
+        // 业务规则没写清 → 拦截
+        if (_ruleBlocked) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFDE68A)),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _clientCtrl,
-              decoration: _inputDecoration('客户名称（必填）'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        // 产品明细
-        _sectionTitle('产品明细（可调整价格与折扣）'),
-        const SizedBox(height: 8),
-        _buildProductsEditor(),
-        const SizedBox(height: 12),
-        // 合计
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            '合计：${_total.toStringAsFixed(1)} 万元',
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF4F46E5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.block_outlined,
+                      size: 18,
+                      color: Color(0xFFB45309),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      '该业务定义不明确，不能发起报价',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF92400E),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '缺少：${widget.business!.missingRuleFields().join('、')}。'
+                  '写清报价公式与毛利底线，才算业务明确——请先回业务定义补全。',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFFB45309)),
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 20),
-        // 操作
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _export,
-                icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
-                label: const Text('导出 PDF'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton.icon(
-                onPressed: _save,
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF4F46E5),
-                ),
-                icon: const Icon(Icons.check, size: 16),
-                label: const Text('保存报价'),
-              ),
-            ),
+          const SizedBox(height: 24),
+        ] else ...[
+          // 难度 / 量级选择（工时公式参数）
+          if (widget.business != null &&
+              (widget.business!.pricingRule.difficultyLevels.isNotEmpty ||
+                  widget.business!.pricingRule.scaleLevels.isNotEmpty)) ...[
+            _buildFactorSelector(),
+            const SizedBox(height: 16),
           ],
+          // 客户信息
+          _sectionTitle('客户信息'),
+          const SizedBox(height: 8),
+          _buildInfoCard(
+            children: [
+              TextField(
+                controller: _nameCtrl,
+                decoration: _inputDecoration('报价名称（选填）'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _clientCtrl,
+                decoration: _inputDecoration('客户名称（必填）'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 产品明细
+          _sectionTitle('产品明细（可调整价格与折扣）'),
+          const SizedBox(height: 8),
+          _buildProductsEditor(),
+          const SizedBox(height: 12),
+          // 合计
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '合计：${_total.toStringAsFixed(1)} 万元',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF4F46E5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // 操作
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _export,
+                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                  label: const Text('导出 PDF'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _save,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF4F46E5),
+                  ),
+                  icon: const Icon(Icons.check, size: 16),
+                  label: const Text('保存报价'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+        ],
+      ],
+    );
+  }
+
+  // ===== 难度/量级档位选择 =====
+  Widget _buildFactorSelector() {
+    final rule = widget.business!.pricingRule;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (rule.difficultyLevels.isNotEmpty)
+            _factorChips('难度', rule.difficultyLevels, _difficulty, (f) {
+              setState(() => _difficulty = f);
+              _applyFactors();
+            }),
+          if (rule.scaleLevels.isNotEmpty) ...[
+            if (rule.difficultyLevels.isNotEmpty) const SizedBox(height: 8),
+            _factorChips('量级', rule.scaleLevels, _scale, (f) {
+              setState(() => _scale = f);
+              _applyFactors();
+            }),
+          ],
+          const SizedBox(height: 6),
+          Text(
+            '工时公式：阶段基线 × 难度系数 × 量级系数，切换后自动重算人天',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _factorChips(
+    String label,
+    List<FactorLevel> levels,
+    FactorLevel? selected,
+    ValueChanged<FactorLevel> onTap,
+  ) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 36,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
         ),
-        const SizedBox(height: 24),
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            children: [
+              for (final f in levels)
+                ChoiceChip(
+                  label: Text('${f.name} ×${f.factor}'),
+                  selected: selected == f,
+                  onSelected: (_) => onTap(f),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }

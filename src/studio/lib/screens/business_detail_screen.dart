@@ -111,18 +111,20 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => QuotationEditScreen(
-                        quotationTemplates:
-                            BusinessStore.instance.data.quotationTemplates,
-                        business: business,
-                      ),
-                    ),
-                  );
-                  if (context.mounted) setState(() {});
-                },
+                onPressed: business.isRuleComplete
+                    ? () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => QuotationEditScreen(
+                              quotationTemplates:
+                                  BusinessStore.instance.data.quotationTemplates,
+                              business: business,
+                            ),
+                          ),
+                        );
+                        if (context.mounted) setState(() {});
+                      }
+                    : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF4F46E5),
                   padding: const EdgeInsets.symmetric(
@@ -238,13 +240,17 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
 
   // ===== 报价规则卡片 =====
   Widget _buildPricingRuleCard() {
-    final rule = widget.business.pricingRule;
+    final business = widget.business;
+    final rule = business.pricingRule;
+    final gaps = business.missingRuleFields();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
+        border: Border.all(
+          color: gaps.isEmpty ? const Color(0xFFF1F5F9) : const Color(0xFFFDE68A),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,6 +265,23 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                   color: Color(0xFF1E293B),
                 ),
               ),
+              const SizedBox(width: 8),
+              if (business.commercialModel.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE9FE),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    business.commercialModel,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF6D28D9),
+                    ),
+                  ),
+                ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -277,6 +300,21 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
               ),
             ],
           ),
+          if (gaps.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '⚠️ 业务定义不明确（${gaps.join('、')}），不能发起报价——写清规则才算业务明确。',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [
@@ -309,7 +347,7 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
           if (rule.stageDefaults.isNotEmpty) ...[
             const SizedBox(height: 12),
             const Text(
-              '阶段工时基线',
+              '阶段工时基线（工时公式：基线 × 难度系数 × 量级系数）',
               style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 6),
@@ -338,6 +376,41 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                     ),
                   )
                   .toList(),
+            ),
+          ],
+          if (rule.difficultyLevels.isNotEmpty || rule.scaleLevels.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 16,
+              runSpacing: 6,
+              children: [
+                if (rule.difficultyLevels.isNotEmpty)
+                  Text(
+                    '难度：${rule.difficultyLevels.map((f) => '${f.name}×${f.factor}').join(' ')}',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  ),
+                if (rule.scaleLevels.isNotEmpty)
+                  Text(
+                    '量级：${rule.scaleLevels.map((f) => '${f.name}×${f.factor}').join(' ')}',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  ),
+              ],
+            ),
+          ],
+          if (business.changeRuleTemplate.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.change_circle_outlined, size: 14, color: Color(0xFF94A3B8)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '变更规则：${business.changeRuleTemplate}',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                ),
+              ],
             ),
           ],
         ],

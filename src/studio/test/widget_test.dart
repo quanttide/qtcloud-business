@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:qtcloud_business_studio/models/business.dart';
 import 'package:qtcloud_business_studio/models/contract.dart';
 import 'package:qtcloud_business_studio/models/seed.dart';
+import 'package:qtcloud_business_studio/models/store.dart';
 import 'package:qtcloud_business_studio/screens/contract_detail_screen.dart';
 import 'package:qtcloud_business_studio/screens/dashboard_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_detail_screen.dart';
@@ -168,5 +170,90 @@ void main() {
     expect(find.text('已到账 5.00 万元 / 共 10.0 万元'), findsOneWidget);
     expect(find.text('1/2 笔'), findsOneWidget);
     expect(find.textContaining('2026-'), findsWidgets);
+  });
+
+  group('业务定义（需求二）：工时公式与门槛校验', () {
+    test('PricingRule 缺省难度/量级档位可解析，工时公式按系数计算', () {
+      const rule = PricingRule(
+        unitPrice: 0.2,
+        stageDefaults: [StageDefault(name: '数据建模', workload: 10)],
+        minGrossMargin: 0.3,
+        paymentTerms: '签约 50%，交付验收后 50%',
+      );
+      // 未传档位时使用默认：低/中/高 ×1.0/1.3/1.6，小/中/大 ×1.0/1.5/2.0
+      expect(rule.difficultyLevels.map((f) => f.name), ['低', '中', '高']);
+      expect(rule.scaleLevels.map((f) => f.factor), [1.0, 1.5, 2.0]);
+
+      final hours = rule.stageHours(
+        rule.stageDefaults.first,
+        rule.difficultyLevels[1],
+        rule.scaleLevels[2],
+      );
+      expect(hours, closeTo(10 * 1.3 * 2.0, 0.001)); // 公式：基线×难度×量级
+    });
+
+    test('productsFromRule 代入难度/量级系数重算人天并标注基线', () {
+      const rule = PricingRule(
+        unitPrice: 0.2,
+        stageDefaults: [StageDefault(name: '数据采集', workload: 4)],
+        minGrossMargin: 0.3,
+        paymentTerms: '',
+      );
+      const d = FactorLevel(name: '高', factor: 1.6);
+      const s = FactorLevel(name: '大', factor: 2.0);
+      final products = BusinessStore.productsFromRule(
+        rule,
+        difficulty: d,
+        scale: s,
+      );
+      expect(products.single.quantity, closeTo(12.8, 0.001));
+      expect(products.single.name, contains('基线 4.0 → 12.8 人天'));
+      // 不传系数保持原基线
+      expect(
+        BusinessStore.productsFromRule(rule).single.quantity,
+        closeTo(4.0, 0.001),
+      );
+    });
+
+    test('规则没写清的业务被拦截：missingRuleFields 列出缺口', () {
+      const incomplete = Business(
+        id: 'biz-x',
+        name: '模糊业务',
+        description: '',
+        status: '在营',
+        pricingRule: PricingRule(
+          unitPrice: 0,
+          stageDefaults: [],
+          minGrossMargin: 0,
+          paymentTerms: '',
+        ),
+        created: '2026-08-22',
+        updated: '2026-08-22',
+      );
+      expect(incomplete.isRuleComplete, isFalse);
+      expect(
+        incomplete.missingRuleFields(),
+        containsAll(['人天单价', '毛利底线', '付款节点', '阶段工时基线']),
+      );
+
+      const complete = Business(
+        id: 'biz-y',
+        name: '明确业务',
+        description: '',
+        status: '在营',
+        pricingRule: PricingRule(
+          unitPrice: 0.2,
+          stageDefaults: [StageDefault(name: '采集', workload: 1)],
+          minGrossMargin: 0.3,
+          paymentTerms: '全款',
+        ),
+        commercialModel: '人天制',
+        changeRuleTemplate: '变更须书面确认',
+        created: '2026-08-22',
+        updated: '2026-08-22',
+      );
+      expect(complete.isRuleComplete, isTrue);
+      expect(complete.commercialModel, '人天制');
+    });
   });
 }

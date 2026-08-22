@@ -19,9 +19,15 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
   final _unitPriceCtrl = TextEditingController(text: '0.1');
   final _marginCtrl = TextEditingController(text: '30');
   final _paymentCtrl = TextEditingController();
+  final _changeRuleCtrl = TextEditingController(
+    text: '范围 / 工期 / 费用任一变更，须书面评估影响并经双方邮件确认后补签协议，口头约定无效。',
+  );
 
   String _status = BusinessStatus.active;
+  String _commercialModel = CommercialModels.presets.first;
   late final List<_StageRow> _stages;
+  late List<FactorLevel> _difficulties;
+  late List<FactorLevel> _scales;
 
   @override
   void initState() {
@@ -31,6 +37,8 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
       _StageRow(name: '数据建模', workload: 1.0),
       _StageRow(name: '报告输出', workload: 1.0),
     ];
+    _difficulties = PricingRule.defaultDifficultyLevels.toList();
+    _scales = PricingRule.defaultScaleLevels.toList();
   }
 
   @override
@@ -40,6 +48,7 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
     _unitPriceCtrl.dispose();
     _marginCtrl.dispose();
     _paymentCtrl.dispose();
+    _changeRuleCtrl.dispose();
     for (final s in _stages) {
       s.dispose();
     }
@@ -81,7 +90,11 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
         stageDefaults: stages,
         minGrossMargin: marginPct / 100,
         paymentTerms: _paymentCtrl.text.trim(),
+        difficultyLevels: _difficulties,
+        scaleLevels: _scales,
       ),
+      commercialModel: _commercialModel,
+      changeRuleTemplate: _changeRuleCtrl.text.trim(),
       created: DateTime.now().toIso8601String().substring(0, 10),
       updated: DateTime.now().toIso8601String().substring(0, 10),
     );
@@ -176,6 +189,23 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
           ),
         ]),
         const SizedBox(height: 16),
+        _sectionTitle('商业模型'),
+        const SizedBox(height: 8),
+        _card([
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final m in CommercialModels.presets)
+                ChoiceChip(
+                  label: Text(m),
+                  selected: _commercialModel == m,
+                  onSelected: (_) => setState(() => _commercialModel = m),
+                ),
+            ],
+          ),
+        ]),
+        const SizedBox(height: 16),
         _sectionTitle('报价规则'),
         const SizedBox(height: 8),
         _card([
@@ -235,6 +265,28 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
             ),
           ),
         ]),
+        const SizedBox(height: 16),
+        _sectionTitle('难度 / 量级档位（工时公式：基线 × 难度系数 × 量级系数）'),
+        const SizedBox(height: 8),
+        _card([
+          _factorEditor('难度', _difficulties, (i, level) {
+            setState(() => _difficulties[i] = level);
+          }, () => setState(() => _difficulties.add(const FactorLevel(name: '', factor: 1.0)))),
+          const SizedBox(height: 12),
+          _factorEditor('量级', _scales, (i, level) {
+            setState(() => _scales[i] = level);
+          }, () => setState(() => _scales.add(const FactorLevel(name: '', factor: 1.0)))),
+        ]),
+        const SizedBox(height: 16),
+        _sectionTitle('变更规则模板'),
+        const SizedBox(height: 8),
+        _card([
+          TextField(
+            controller: _changeRuleCtrl,
+            maxLines: 3,
+            decoration: _inputDecoration('范围/工期/费用变更如何评估与确认'),
+          ),
+        ]),
         const SizedBox(height: 20),
         FilledButton.icon(
           onPressed: _save,
@@ -286,6 +338,71 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _factorEditor(
+    String label,
+    List<FactorLevel> levels,
+    void Function(int, FactorLevel) onChanged,
+    VoidCallback onAdd,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const Spacer(),
+            InkWell(
+              onTap: onAdd,
+              borderRadius: BorderRadius.circular(8),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(Icons.add, size: 14, color: Color(0xFF4F46E5)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        for (var i = 0; i < levels.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    key: ValueKey('$label-name-$i-${levels[i].name}'),
+                    initialValue: levels[i].name,
+                    decoration: _inputDecoration('档位名（如：高）'),
+                    onChanged: (v) => onChanged(i, FactorLevel(name: v.trim(), factor: levels[i].factor)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey('$label-factor-$i-${levels[i].factor}'),
+                    initialValue: levels[i].factor.toString(),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: _inputDecoration('系数'),
+                    onChanged: (v) => onChanged(
+                      i,
+                      FactorLevel(
+                        name: levels[i].name,
+                        factor: double.tryParse(v.trim()) ?? 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 

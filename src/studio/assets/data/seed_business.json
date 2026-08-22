@@ -7,6 +7,8 @@
       "status": "在营",
       "created": "2026-06-01",
       "updated": "2026-08-08",
+      "commercialModel": "人天制",
+      "changeRuleTemplate": "范围/工期/费用任一变更，须书面评估影响并经双方邮件确认后补签协议。",
       "pricingRule": {
         "unitPrice": 0.1,
         "minGrossMargin": 0.3,
@@ -17,6 +19,16 @@
           { "name": "数据导入", "workload": 1.5 },
           { "name": "数据治理", "workload": 1.0 },
           { "name": "报告输出", "workload": 1.0 }
+        ],
+        "difficultyLevels": [
+          { "name": "低", "factor": 1.0 },
+          { "name": "中", "factor": 1.3 },
+          { "name": "高", "factor": 1.6 }
+        ],
+        "scaleLevels": [
+          { "name": "小", "factor": 1.0 },
+          { "name": "中", "factor": 1.5 },
+          { "name": "大", "factor": 2.0 }
         ]
       }
     },
