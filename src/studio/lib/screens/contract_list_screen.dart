@@ -116,12 +116,15 @@ class _ContractListScreenState extends State<ContractListScreen> {
                       final contract = _filtered[index];
                       return ContractCard(
                         contract: contract,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                ContractDetailScreen(contract: contract),
-                          ),
-                        ),
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ContractDetailScreen(contract: contract),
+                            ),
+                          );
+                          if (mounted) setState(() {});
+                        },
                       );
                     },
                   ),

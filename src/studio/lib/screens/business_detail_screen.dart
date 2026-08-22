@@ -6,6 +6,7 @@ import '../models/store.dart';
 import '../widgets/cards/contract_card.dart';
 import '../widgets/cards/quotation_card.dart';
 import '../widgets/common/responsive.dart';
+import '../widgets/dialogs/confirm_delete_dialog.dart';
 import 'contract_detail_screen.dart';
 import 'contract_edit_screen.dart';
 import 'quotation_detail_screen.dart';
@@ -152,11 +153,14 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: ContractCard(
                       contract: c,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => ContractDetailScreen(contract: c),
-                        ),
-                      ),
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ContractDetailScreen(contract: c),
+                          ),
+                        );
+                        if (context.mounted) setState(() {});
+                      },
                     ),
                   ),
                 ),
@@ -170,15 +174,29 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: QuotationCard(
                       quotation: q,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => QuotationDetailScreen(quotation: q),
-                        ),
-                      ),
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => QuotationDetailScreen(quotation: q),
+                          ),
+                        );
+                        if (context.mounted) setState(() {});
+                      },
                     ),
                   ),
                 ),
                 if (quotations.isEmpty) const _EmptyHint(text: '该业务暂无报价'),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: _confirmDeleteBusiness,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFEF4444),
+                    side: const BorderSide(color: Color(0xFFFECACA)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('删除该业务'),
+                ),
                 const SizedBox(height: 24),
               ],
             ),
@@ -186,6 +204,25 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDeleteBusiness() async {
+    final business = widget.business;
+    final data = BusinessStore.instance.data;
+    final quotationCount = data.quotationsOf(business.id).length;
+    final contractCount = data.contractsOf(business.id).length;
+    final linked = [
+      if (quotationCount > 0) '$quotationCount 个报价',
+      if (contractCount > 0) '$contractCount 个合同',
+    ].join('、');
+    final ok = await confirmDelete(
+      context,
+      title: '删除「${business.name}」？',
+      content: linked.isEmpty ? '删除后不可恢复。' : '名下 $linked 将一并删除，且不可恢复。',
+    );
+    if (!ok || !mounted) return;
+    await BusinessStore.instance.deleteBusiness(business.id);
+    if (mounted) Navigator.of(context).pop();
   }
 
   // ===== 报价规则卡片 =====

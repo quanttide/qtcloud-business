@@ -139,12 +139,15 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
                       final quotation = _filtered[index];
                       return QuotationCard(
                         quotation: quotation,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                QuotationDetailScreen(quotation: quotation),
-                          ),
-                        ),
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  QuotationDetailScreen(quotation: quotation),
+                            ),
+                          );
+                          if (mounted) setState(() {});
+                        },
                       );
                     },
                   ),

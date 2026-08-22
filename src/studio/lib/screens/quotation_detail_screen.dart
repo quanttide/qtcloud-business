@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/quotation.dart';
+import '../models/store.dart';
 import '../widgets/common/responsive.dart';
 import '../widgets/common/sidebar.dart';
 import '../widgets/common/status_badge.dart';
+import '../widgets/dialogs/confirm_delete_dialog.dart';
 import '../widgets/dialogs/export_dialog.dart';
 
 /// 报价详情：产品明细、定价说明、版本历史（US2）、导出（US1）
@@ -53,6 +55,18 @@ class QuotationDetailScreen extends StatelessWidget {
         _sectionTitle('版本历史'),
         const SizedBox(height: 8),
         _buildVersionsCard(),
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: () => _deleteQuotation(context),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFEF4444),
+            side: const BorderSide(color: Color(0xFFFECACA)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          icon: const Icon(Icons.delete_outline, size: 16),
+          label: const Text('删除该报价'),
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -149,6 +163,17 @@ class QuotationDetailScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _deleteQuotation(BuildContext context) async {
+    final ok = await confirmDelete(
+      context,
+      title: '删除「${quotation.name}」？',
+      content: '删除后不可恢复。',
+    );
+    if (!ok || !context.mounted) return;
+    await BusinessStore.instance.deleteQuotation(quotation.id);
+    if (context.mounted) Navigator.of(context).pop();
   }
 
   Widget _sectionTitle(String title) {

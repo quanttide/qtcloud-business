@@ -6,6 +6,7 @@ import '../widgets/common/responsive.dart';
 import '../widgets/common/sidebar.dart';
 import '../widgets/common/status_badge.dart';
 import '../widgets/common/toast.dart';
+import '../widgets/dialogs/confirm_delete_dialog.dart';
 
 /// 合同详情：签署进度（发送→签署→归档，US4）+ 付款到账 + 履约跟踪 + 签署提醒
 class ContractDetailScreen extends StatefulWidget {
@@ -92,6 +93,18 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
             label: const Text('提醒客户签署'),
           ),
         ],
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: _deleteContract,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFEF4444),
+            side: const BorderSide(color: Color(0xFFFECACA)),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          icon: const Icon(Icons.delete_outline, size: 16),
+          label: const Text('删除该合同'),
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -165,6 +178,17 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
         color: Color(0xFF1E293B),
       ),
     );
+  }
+
+  Future<void> _deleteContract() async {
+    final ok = await confirmDelete(
+      context,
+      title: '删除「${contract.name}」？',
+      content: '删除后不可恢复。',
+    );
+    if (!ok || !mounted) return;
+    await BusinessStore.instance.deleteContract(contract.id);
+    if (mounted) Navigator.of(context).pop();
   }
 
   // ===== 签署进度步骤条 =====
