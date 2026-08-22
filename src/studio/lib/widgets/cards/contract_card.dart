@@ -3,12 +3,20 @@ import 'package:flutter/material.dart';
 import '../../models/contract.dart';
 import '../common/status_badge.dart';
 
-/// 合同卡片：名称 + 状态徽章 + 客户/模板 + 金额 + 履约进度
+/// 合同卡片：名称 + 状态徽章 + 客户/模板/所属业务 + 金额 + 履约进度
 class ContractCard extends StatelessWidget {
   final Contract contract;
   final VoidCallback onTap;
 
-  const ContractCard({super.key, required this.contract, required this.onTap});
+  /// 所属业务名（可选）：订单挂靠哪个业务，交接时可追溯
+  final String? businessName;
+
+  const ContractCard({
+    super.key,
+    required this.contract,
+    required this.onTap,
+    this.businessName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +80,7 @@ class ContractCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
+                  '${businessName == null ? '' : '业务：$businessName · '}'
                   '${contract.client} · ${contract.template}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

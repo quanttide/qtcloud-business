@@ -3,15 +3,19 @@ import 'package:flutter/material.dart';
 import '../../models/quotation.dart';
 import '../common/status_badge.dart';
 
-/// 报价卡片：名称 + 版本 + 状态徽章 + 客户/模板 + 金额
+/// 报价卡片：名称 + 版本 + 状态徽章 + 客户/模板/所属业务 + 金额
 class QuotationCard extends StatelessWidget {
   final Quotation quotation;
   final VoidCallback onTap;
+
+  /// 所属业务名（可选）：订单挂靠哪个业务，交接时可追溯
+  final String? businessName;
 
   const QuotationCard({
     super.key,
     required this.quotation,
     required this.onTap,
+    this.businessName,
   });
 
   @override
@@ -78,6 +82,7 @@ class QuotationCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
+                        '${businessName == null ? '' : '业务：$businessName · '}'
                         '${quotation.client} · ${quotation.template}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

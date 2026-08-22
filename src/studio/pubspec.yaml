@@ -1,7 +1,7 @@
 name: qtcloud_business_studio
 description: "量潮商务云"
 publish_to: "none"
-version: 0.1.0-alpha.5
+version: 0.1.0-alpha.6
 
 environment:
   sdk: ^3.12.2

@@ -116,6 +116,7 @@ class _ContractListScreenState extends State<ContractListScreen> {
                       final contract = _filtered[index];
                       return ContractCard(
                         contract: contract,
+                        businessName: _businessNameOf(contract.businessId),
                         onTap: () async {
                           await Navigator.of(context).push(
                             MaterialPageRoute(
@@ -132,6 +133,15 @@ class _ContractListScreenState extends State<ContractListScreen> {
         ],
       ),
     );
+  }
+
+  String? _businessNameOf(String businessId) {
+    if (businessId.isEmpty) return null;
+    final businesses = BusinessStore.instance.data.businesses;
+    for (final b in businesses) {
+      if (b.id == businessId) return b.name;
+    }
+    return null;
   }
 
   // ===== 筛选按钮组 =====

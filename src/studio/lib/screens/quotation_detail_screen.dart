@@ -5,6 +5,7 @@ import '../models/store.dart';
 import '../widgets/common/responsive.dart';
 import '../widgets/common/sidebar.dart';
 import '../widgets/common/status_badge.dart';
+import '../widgets/common/toast.dart';
 import '../widgets/dialogs/confirm_delete_dialog.dart';
 import '../widgets/dialogs/export_dialog.dart';
 
@@ -157,6 +158,28 @@ class QuotationDetailScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
+        // 复制为新报价（商务工作可复制、可交接）
+        Tooltip(
+          message: '以此单为底样新建一份草稿报价',
+          child: InkWell(
+            onTap: () => _duplicateQuotation(context),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Icon(
+                Icons.copy_all_outlined,
+                size: 16,
+                color: Color(0xFF475569),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
         // 删除（顶部显眼入口）
         Tooltip(
           message: '删除该报价',
@@ -191,6 +214,48 @@ class QuotationDetailScreen extends StatelessWidget {
     if (!ok || !context.mounted) return;
     await BusinessStore.instance.deleteQuotation(quotation.id);
     if (context.mounted) Navigator.of(context).pop();
+  }
+
+  /// 复制为新报价：以本单为底样生成一份新草稿（v1），挂同一业务
+  Future<void> _duplicateQuotation(BuildContext context) async {
+    final now = DateTime.now().toIso8601String().substring(0, 10);
+    final copy = Quotation(
+      id: BusinessStore.instance.nextQuotationId(),
+      businessId: quotation.businessId,
+      name: '${quotation.name}（复制）',
+      client: quotation.client,
+      template: quotation.template,
+      status: '草稿',
+      version: 1,
+      created: now,
+      updated: now,
+      pricingNote: quotation.pricingNote.isEmpty
+          ? ''
+          : '${quotation.pricingNote}（复制自 ${quotation.id}）',
+      products: quotation.products
+          .map(
+            (p) => QuotationProduct(
+              name: p.name,
+              unitPrice: p.unitPrice,
+              quantity: p.quantity,
+              discount: p.discount,
+            ),
+          )
+          .toList(),
+      totalAmount: quotation.totalAmount,
+      versions: [
+        QuotationVersion(
+          version: 1,
+          updated: now,
+          totalAmount: quotation.totalAmount,
+          note: '复制自 ${quotation.name} v${quotation.version}',
+        ),
+      ],
+    );
+    await BusinessStore.instance.addQuotation(copy);
+    if (context.mounted) {
+      showAppToast(context, '✅ 已复制为新草稿：${copy.id}');
+    }
   }
 
   Widget _sectionTitle(String title) {

@@ -41,6 +41,15 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
     return _items.where((item) => item.client.contains(q)).toList();
   }
 
+  String? _businessNameOf(String businessId) {
+    if (businessId.isEmpty) return null;
+    final businesses = BusinessStore.instance.data.businesses;
+    for (final b in businesses) {
+      if (b.id == businessId) return b.name;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,6 +148,7 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
                       final quotation = _filtered[index];
                       return QuotationCard(
                         quotation: quotation,
+                        businessName: _businessNameOf(quotation.businessId),
                         onTap: () async {
                           await Navigator.of(context).push(
                             MaterialPageRoute(

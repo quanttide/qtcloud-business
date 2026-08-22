@@ -31,13 +31,27 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
   BusinessTemplate? _template;
   late final List<_ProductRow> _rows;
 
+  /// 所属业务：从业务详情进入时由外部传入；
+  /// 从工作台新建时必须手动选择——订单不能脱离业务独立存在
+  String? _businessId;
+
   /// 从业务发起时选中的难度 / 量级档位（工时公式参数）
   FactorLevel? _difficulty;
   FactorLevel? _scale;
 
+  /// 下拉选择的业务（与外部传入二选一）
+  Business? get _pickedBusiness {
+    if (_businessId == null) return null;
+    for (final b in BusinessStore.instance.data.businesses) {
+      if (b.id == _businessId) return b;
+    }
+    return null;
+  }
+
+  Business? get _business => widget.business ?? _pickedBusiness;
+
   /// 业务规则没写清 → 拦截进入订单执行
-  bool get _ruleBlocked =>
-      widget.business != null && !widget.business!.isRuleComplete;
+  bool get _ruleBlocked => _business != null && !_business!.isRuleComplete;
 
   @override
   void initState() {
@@ -45,36 +59,42 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
     _rows = [];
     final business = widget.business;
     if (business != null) {
-      if (business.isRuleComplete) {
-        FactorLevel? pick(List<FactorLevel> levels) =>
-            levels.isEmpty ? null : levels[levels.length > 1 ? 1 : 0];
-        // 默认取中间档位（如 低/中/高 → 中）
-        _difficulty = pick(business.pricingRule.difficultyLevels);
-        _scale = pick(business.pricingRule.scaleLevels);
-        // 从业务发起：代入业务的报价规则（工时公式算出各阶段人天）
-        _rows.addAll(
-          BusinessStore.productsFromRule(
-            business.pricingRule,
-            difficulty: _difficulty,
-            scale: _scale,
-          ).map(
-            (p) => _ProductRow(
-              name: p.name,
-              price: p.unitPrice,
-              qty: p.quantity,
-              discount: p.discount,
-            ),
-          ),
-        );
-      }
+      _initFromBusinessRule(business);
     } else if (widget.quotationTemplates.isNotEmpty) {
       _applyTemplate(widget.quotationTemplates.first);
     }
   }
 
+  void _initFromBusinessRule(Business business) {
+    if (!business.isRuleComplete) return;
+    FactorLevel? pick(List<FactorLevel> levels) =>
+        levels.isEmpty ? null : levels[levels.length > 1 ? 1 : 0];
+    // 默认取中间档位（如 低/中/高 → 中）
+    _difficulty = pick(business.pricingRule.difficultyLevels);
+    _scale = pick(business.pricingRule.scaleLevels);
+    // 代入业务的报价规则（工时公式算出各阶段人天）
+    final fresh = BusinessStore.productsFromRule(
+      business.pricingRule,
+      difficulty: _difficulty,
+      scale: _scale,
+    )
+        .map(
+          (p) => _ProductRow(
+            name: p.name,
+            price: p.unitPrice,
+            qty: p.quantity,
+            discount: p.discount,
+          ),
+        )
+        .toList();
+    _rows
+      ..clear()
+      ..addAll(fresh);
+  }
+
   /// 切换难度/量级后按工时公式重算明细（保留已改的单价与折扣）
   void _applyFactors() {
-    final business = widget.business;
+    final business = _business;
     if (business == null || _difficulty == null || _scale == null) return;
     final fresh = BusinessStore.productsFromRule(
       business.pricingRule,
@@ -130,7 +150,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
 
   /// 定价说明：写明工时公式代入的难度/量级参数，报价可复核
   String get _pricingNote {
-    final business = widget.business;
+    final business = _business;
     if (business == null) return '';
     final factors = (_difficulty != null || _scale != null)
         ? '（难度 ${_difficulty?.name ?? '-'} ×${_difficulty?.factor.toStringAsFixed(1) ?? '-'}'
@@ -142,6 +162,10 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
 
   void _save() {
     final client = _clientCtrl.text.trim();
+    if (_business == null) {
+      showAppToast(context, '订单必须挂在业务下：请先选择所属业务');
+      return;
+    }
     if (client.isEmpty) {
       showAppToast(context, '请填写客户名称');
       return;
@@ -150,7 +174,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       showAppToast(context, '请至少添加一条产品明细');
       return;
     }
-    final business = widget.business;
+    final business = _business;
     final products = _rows
         .where((r) => r.nameCtrl.text.trim().isNotEmpty)
         .map(
@@ -214,7 +238,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
       context,
       quotation: Quotation(
         id: '草稿预览',
-        businessId: widget.business?.id ?? '',
+        businessId: _business?.id ?? '',
         name: name,
         client: client,
         template: _template?.name ?? '',
@@ -277,7 +301,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        // 所属业务
+        // 所属业务：外部传入直接展示；工作台新建时必选下拉
         if (widget.business != null) ...[
           Container(
             padding: const EdgeInsets.all(12),
@@ -306,9 +330,12 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
             ),
           ),
           const SizedBox(height: 16),
+        ] else ...[
+          _buildBusinessPicker(),
+          const SizedBox(height: 16),
         ],
-        // 模板选择
-        if (widget.business == null && !_ruleBlocked) ...[
+        // 模板选择（未挂业务前可选；挂上业务后以业务规则为准）
+        if (widget.business == null && _businessId == null && !_ruleBlocked) ...[
           _sectionTitle('方案模板'),
           const SizedBox(height: 8),
           _buildTemplatePicker(),
@@ -346,7 +373,7 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '缺少：${widget.business!.missingRuleFields().join('、')}。'
+                  '缺少：${_business!.missingRuleFields().join('、')}。'
                   '写清报价公式与毛利底线，才算业务明确——请先回业务定义补全。',
                   style: const TextStyle(fontSize: 12, color: Color(0xFFB45309)),
                 ),
@@ -356,9 +383,9 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
           const SizedBox(height: 24),
         ] else ...[
           // 难度 / 量级选择（工时公式参数）
-          if (widget.business != null &&
-              (widget.business!.pricingRule.difficultyLevels.isNotEmpty ||
-                  widget.business!.pricingRule.scaleLevels.isNotEmpty)) ...[
+          if (_business != null &&
+              (_business!.pricingRule.difficultyLevels.isNotEmpty ||
+                  _business!.pricingRule.scaleLevels.isNotEmpty)) ...[
             _buildFactorSelector(),
             const SizedBox(height: 16),
           ],
@@ -426,9 +453,80 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
     );
   }
 
+  // ===== 所属业务选择（订单不能脱离业务） =====
+  Widget _buildBusinessPicker() {
+    final businesses = BusinessStore.instance.data.businesses;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _businessId == null
+              ? const Color(0xFFFDE68A)
+              : const Color(0xFFF1F5F9),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.business_center_outlined,
+                size: 16,
+                color: Color(0xFF4F46E5),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                '所属业务（必选，订单是业务的实例）',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (businesses.isEmpty)
+            const Text(
+              '暂无业务可挂——请先到「业务」新建并写清报价规则',
+              style: TextStyle(fontSize: 12, color: Color(0xFFB45309)),
+            )
+          else
+            DropdownButtonFormField<String>(
+              initialValue: _businessId,
+              isDense: true,
+              hint: const Text('选择要挂在哪个业务下'),
+              decoration: _inputDecoration(''),
+              items: [
+                for (final b in businesses)
+                  DropdownMenuItem(
+                    value: b.id,
+                    child: Text(
+                      '${b.name}（${b.status} · 单价 ${b.pricingRule.unitPrice.toStringAsFixed(2)} 万）',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+              ],
+              onChanged: (id) {
+                if (id == null || id == _businessId) return;
+                setState(() => _businessId = id);
+                final b = businesses.firstWhere((e) => e.id == id);
+                // 挂上业务即代入其报价规则与流程参数
+                _template = null;
+                _initFromBusinessRule(b);
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
   // ===== 难度/量级档位选择 =====
   Widget _buildFactorSelector() {
-    final rule = widget.business!.pricingRule;
+    final rule = _business!.pricingRule;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -502,40 +600,43 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFF1F5F9)),
       ),
-      child: RadioGroup<String>(
-        groupValue: _template?.id,
-        onChanged: (id) {
-          if (id == null) return;
-          final t = widget.quotationTemplates.firstWhere((e) => e.id == id);
-          _applyTemplate(t);
-        },
-        child: Column(
-          children: widget.quotationTemplates
-              .map(
-                (t) => RadioListTile<String>(
-                  value: t.id,
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    t.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E293B),
+        child: RadioGroup<String>(
+          groupValue: _template?.id,
+          onChanged: (id) {
+            if (id == null) return;
+            final t = widget.quotationTemplates.firstWhere((e) => e.id == id);
+            _applyTemplate(t);
+          },
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              children: widget.quotationTemplates
+                  .map(
+                    (t) => RadioListTile<String>(
+                      value: t.id,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        t.name,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      subtitle: Text(
+                        t.description,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
                     ),
-                  ),
-                  subtitle: Text(
-                    t.description,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
+                  )
+                  .toList(),
+            ),
+          ),
         ),
-      ),
     );
   }
 

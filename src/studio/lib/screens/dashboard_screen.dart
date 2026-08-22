@@ -167,6 +167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.only(bottom: 10),
             child: QuotationCard(
               quotation: q,
+              businessName: _businessNameOf(data, q.businessId),
               onTap: () => _openDetail(QuotationDetailScreen(quotation: q)),
             ),
           ),
@@ -197,6 +198,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.only(bottom: 10),
             child: ContractCard(
               contract: c,
+              businessName: _businessNameOf(data, c.businessId),
               onTap: () => _openDetail(ContractDetailScreen(contract: c)),
             ),
           ),
@@ -217,6 +219,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ===== 最近动态（操作留痕） =====
+  String? _businessNameOf(BusinessData data, String businessId) {
+    if (businessId.isEmpty) return null;
+    for (final b in data.businesses) {
+      if (b.id == businessId) return b.name;
+    }
+    return null;
+  }
+
   Widget _buildHistoryCard(List<HistoryEntry> entries) {
     return Container(
       decoration: BoxDecoration(

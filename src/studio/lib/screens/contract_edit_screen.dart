@@ -29,7 +29,20 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
   final _amountCtrl = TextEditingController();
 
   BusinessTemplate? _template;
-  late final List<_PaymentRow> _payments;
+
+  /// 所属业务：从业务详情进入时由外部传入；
+  /// 从工作台新建时必须手动选择——订单不能脱离业务独立存在
+  String? _businessId;
+  late List<_PaymentRow> _payments;
+
+  Business? get _business {
+    if (widget.business != null) return widget.business;
+    if (_businessId == null) return null;
+    for (final b in BusinessStore.instance.data.businesses) {
+      if (b.id == _businessId) return b;
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -37,10 +50,29 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
     if (widget.contractTemplates.isNotEmpty) {
       _template = widget.contractTemplates.first;
     }
-    final business = widget.business;
-    _payments = BusinessStore.paymentNodesFromTerms(
+    _payments = _paymentRowsFor(_business);
+  }
+
+  /// 按业务的付款节点模板解析节点（流程参数继承）
+  List<_PaymentRow> _paymentRowsFor(Business? business) {
+    return BusinessStore.paymentNodesFromTerms(
       business?.pricingRule.paymentTerms ?? '',
-    ).map((p) => _PaymentRow(name: p.name, ratio: p.ratio)).toList();
+    )
+        .map((p) => _PaymentRow(name: p.name, ratio: p.ratio))
+        .toList();
+  }
+
+  void _onBusinessChanged(String? id) {
+    if (id == null || id == _businessId) return;
+    setState(() {
+      _businessId = id;
+      for (final p in _payments) {
+        p.nameCtrl.dispose();
+        p.ratioCtrl.dispose();
+      }
+      // 挂上业务即代入其付款节点模板（流程参数）
+      _payments = _paymentRowsFor(_business);
+    });
   }
 
   @override
@@ -62,6 +94,11 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
       _payments.fold(0.0, (sum, p) => sum + p.ratio);
 
   void _save() {
+    final business = _business;
+    if (business == null) {
+      showAppToast(context, '合同必须挂在业务下：请先选择所属业务');
+      return;
+    }
     final client = _clientCtrl.text.trim();
     if (client.isEmpty) {
       showAppToast(context, '请填写客户名称');
@@ -75,13 +112,12 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
       showAppToast(context, '请至少添加一个付款节点');
       return;
     }
-    final business = widget.business;
     final now = DateTime.now().toIso8601String().substring(0, 10);
     BusinessStore.instance
         .addContract(
           Contract(
             id: BusinessStore.instance.nextContractId(),
-            businessId: business?.id ?? '',
+            businessId: business.id,
             name: _nameCtrl.text.trim().isEmpty
                 ? '$client · 合同'
                 : _nameCtrl.text.trim(),
@@ -211,7 +247,7 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
   }
 
   Widget _buildBody(BuildContext context, {required bool compact}) {
-    final business = widget.business;
+    final business = _business;
     return ListView(
       padding: pageHPadding(context).add(const EdgeInsets.only(top: 16)),
       children: [
@@ -231,7 +267,7 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              business == null ? '新建合同' : '登记合同',
+              widget.business == null ? '新建合同' : '登记合同',
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -241,8 +277,8 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        // 所属业务
-        if (business != null) ...[
+        // 所属业务：外部传入直接展示；工作台新建时必选下拉
+        if (widget.business != null) ...[
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -259,7 +295,7 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '所属业务：${business.name} · 付款模板：${business.pricingRule.paymentTerms}',
+                    '所属业务：${business!.name} · 付款模板：${business.pricingRule.paymentTerms}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF3730A3),
@@ -269,6 +305,9 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+        ] else ...[
+          _buildBusinessPicker(),
           const SizedBox(height: 16),
         ],
         _sectionTitle('合同模板'),
@@ -307,6 +346,70 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
         ),
         const SizedBox(height: 24),
       ],
+    );
+  }
+
+  // ===== 所属业务选择（合同不能脱离业务） =====
+  Widget _buildBusinessPicker() {
+    final businesses = BusinessStore.instance.data.businesses;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _businessId == null
+              ? const Color(0xFFFDE68A)
+              : const Color(0xFFF1F5F9),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.business_center_outlined,
+                size: 16,
+                color: Color(0xFF4F46E5),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                '所属业务（必选，订单是业务的实例）',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (businesses.isEmpty)
+            const Text(
+              '暂无业务可挂——请先到「业务」新建并写清报价规则',
+              style: TextStyle(fontSize: 12, color: Color(0xFFB45309)),
+            )
+          else
+            DropdownButtonFormField<String>(
+              initialValue: _businessId,
+              isDense: true,
+              hint: const Text('选择要挂在哪个业务下'),
+              decoration: _inputDecoration(''),
+              items: [
+                for (final b in businesses)
+                  DropdownMenuItem(
+                    value: b.id,
+                    child: Text(
+                      '${b.name}（${b.status} · ${b.pricingRule.paymentTerms}）',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+              ],
+              onChanged: _onBusinessChanged,
+            ),
+        ],
+      ),
     );
   }
 

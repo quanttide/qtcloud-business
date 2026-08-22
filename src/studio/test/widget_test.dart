@@ -11,6 +11,7 @@ import 'package:qtcloud_business_studio/models/store.dart';
 import 'package:qtcloud_business_studio/screens/contract_detail_screen.dart';
 import 'package:qtcloud_business_studio/screens/dashboard_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_detail_screen.dart';
+import 'package:qtcloud_business_studio/screens/quotation_edit_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_list_screen.dart';
 
 /// 从仓库 seed JSON 同步构造测试用 BusinessData。
@@ -255,5 +256,31 @@ void main() {
       expect(complete.isRuleComplete, isTrue);
       expect(complete.commercialModel, '人天制');
     });
+  });
+
+  testWidgets('新建报价未选业务时被拦截（订单不能脱离业务）', (tester) async {
+    final data = loadTestSeed();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: QuotationEditScreen(quotationTemplates: data.quotationTemplates),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 必选业务下拉存在，且默认未选择
+    expect(find.text('所属业务（必选，订单是业务的实例）'), findsOneWidget);
+
+    // 不选业务直接保存 → 拦截提示（懒加载列表需先滚到底部按钮）
+    final listScrollable = find
+        .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(
+      find.text('保存报价'),
+      250,
+      scrollable: listScrollable,
+    );
+    await tester.tap(find.text('保存报价'));
+    await tester.pump();
+    expect(find.textContaining('订单必须挂在业务下'), findsOneWidget);
   });
 }
