@@ -133,6 +133,28 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('发起报价'),
               ),
+              const SizedBox(width: 8),
+              // 删除（顶部显眼入口）
+              Tooltip(
+                message: '删除该业务',
+                child: InkWell(
+                  onTap: _confirmDeleteBusiness,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      size: 16,
+                      color: Color(0xFFEF4444),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -186,17 +208,6 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
                   ),
                 ),
                 if (quotations.isEmpty) const _EmptyHint(text: '该业务暂无报价'),
-                const SizedBox(height: 24),
-                OutlinedButton.icon(
-                  onPressed: _confirmDeleteBusiness,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFEF4444),
-                    side: const BorderSide(color: Color(0xFFFECACA)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  icon: const Icon(Icons.delete_outline, size: 16),
-                  label: const Text('删除该业务'),
-                ),
                 const SizedBox(height: 24),
               ],
             ),

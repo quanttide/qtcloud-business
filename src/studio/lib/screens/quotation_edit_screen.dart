@@ -150,12 +150,39 @@ class _QuotationEditScreenState extends State<QuotationEditScreen> {
   }
 
   void _export() {
+    final client = _clientCtrl.text.trim().isEmpty
+        ? '（未填客户）'
+        : _clientCtrl.text.trim();
+    final name = _nameCtrl.text.trim().isEmpty ? '$client · 报价单' : _nameCtrl.text.trim();
+    final products = _rows
+        .where((r) => r.nameCtrl.text.trim().isNotEmpty)
+        .map(
+          (r) => QuotationProduct(
+            name: r.nameCtrl.text.trim(),
+            unitPrice: r.price,
+            quantity: r.qty,
+            discount: r.discount,
+          ),
+        )
+        .toList();
+    final now = DateTime.now().toIso8601String().substring(0, 10);
     showExportDialog(
       context,
-      quotationName: _nameCtrl.text.trim().isEmpty
-          ? '未命名报价'
-          : _nameCtrl.text.trim(),
-      version: 1,
+      quotation: Quotation(
+        id: '草稿预览',
+        businessId: widget.business?.id ?? '',
+        name: name,
+        client: client,
+        template: _template?.name ?? '',
+        status: '草稿',
+        version: 1,
+        created: now,
+        updated: now,
+        pricingNote: '',
+        products: products,
+        totalAmount: _total,
+        versions: const [],
+      ),
     );
   }
 

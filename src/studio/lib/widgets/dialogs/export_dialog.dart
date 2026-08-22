@@ -1,17 +1,46 @@
 import 'package:flutter/material.dart';
 
+import '../../models/quotation.dart';
+import '../../services/pdf_export.dart';
 import '../common/toast.dart';
 
-/// 报价单导出弹窗（文件列表为占位 mock，等真实 PDF 生成接入后替换）
-Future<void> showExportDialog(
-  BuildContext context, {
-  required String quotationName,
-  required int version,
-}) async {
-  final filename = '报价单-$quotationName-v$version.pdf';
-  await showDialog(
-    context: context,
-    builder: (context) => Dialog(
+/// 报价单导出弹窗：点击「下载」真实生成 PDF 并触发浏览器下载
+class ExportDialog extends StatefulWidget {
+  final Quotation quotation;
+
+  const ExportDialog({super.key, required this.quotation});
+
+  @override
+  State<ExportDialog> createState() => _ExportDialogState();
+}
+
+class _ExportDialogState extends State<ExportDialog> {
+  bool _generating = false;
+
+  String get _filename =>
+      '报价单-${widget.quotation.name}-v${widget.quotation.version}.pdf';
+
+  Future<void> _download(BuildContext context) async {
+    if (_generating) return;
+    setState(() => _generating = true);
+    try {
+      final bytes = await buildQuotationPdf(widget.quotation);
+      downloadPdf(bytes, _filename);
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      showAppToast(context, '📥 下载完成：$_filename');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _generating = false);
+      showAppToast(context, 'PDF 生成失败，请重试');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final quotationName = widget.quotation.name;
+    final version = widget.quotation.version;
+    return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
@@ -59,13 +88,7 @@ Future<void> showExportDialog(
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              '以下文件可供下载：',
-              style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-            ),
-            const SizedBox(height: 8),
             Container(
-              margin: const EdgeInsets.only(bottom: 6),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
@@ -81,28 +104,24 @@ Future<void> showExportDialog(
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      filename,
+                      _filename,
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF1E293B),
                       ),
                     ),
                   ),
-                  const Text(
-                    '0.3 MB',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                  ),
                   const SizedBox(width: 12),
                   InkWell(
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      showAppToast(context, '📥 下载 $filename');
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    onTap: () => _download(context),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       child: Text(
-                        '下载',
-                        style: TextStyle(
+                        _generating ? '生成中…' : '下载',
+                        style: const TextStyle(
                           fontSize: 11,
                           color: Color(0xFF4F46E5),
                           fontWeight: FontWeight.w500,
@@ -116,6 +135,16 @@ Future<void> showExportDialog(
           ],
         ),
       ),
-    ),
+    );
+  }
+}
+
+Future<void> showExportDialog(
+  BuildContext context, {
+  required Quotation quotation,
+}) {
+  return showDialog(
+    context: context,
+    builder: (context) => ExportDialog(quotation: quotation),
   );
 }

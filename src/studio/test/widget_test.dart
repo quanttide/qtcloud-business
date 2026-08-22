@@ -87,6 +87,10 @@ void main() {
     expect(find.textContaining('.pdf'), findsOneWidget);
 
     await tester.tap(find.text('下载'));
+    // 真实 PDF 生成需加载字体资产（真实异步 IO）
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(seconds: 5)),
+    );
     await tester.pumpAndSettle();
     expect(find.textContaining('📥 下载'), findsOneWidget);
   });

@@ -94,17 +94,6 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
           ),
         ],
         const SizedBox(height: 24),
-        OutlinedButton.icon(
-          onPressed: _deleteContract,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFEF4444),
-            side: const BorderSide(color: Color(0xFFFECACA)),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-          icon: const Icon(Icons.delete_outline, size: 16),
-          label: const Text('删除该合同'),
-        ),
-        const SizedBox(height: 16),
       ],
     );
   }
@@ -163,6 +152,28 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1E293B),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // 删除（顶部显眼入口）
+        Tooltip(
+          message: '删除该合同',
+          child: InkWell(
+            onTap: _deleteContract,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: const Icon(
+                Icons.delete_outline,
+                size: 16,
+                color: Color(0xFFEF4444),
+              ),
+            ),
           ),
         ),
       ],

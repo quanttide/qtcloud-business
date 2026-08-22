@@ -52,21 +52,20 @@ class QuotationDetailScreen extends StatelessWidget {
           const SizedBox(height: 16),
         ],
         // 版本历史
-        _sectionTitle('版本历史'),
+        Row(
+          children: [
+            _sectionTitle('版本历史'),
+            if (quotation.versions.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Text(
+                '共 ${quotation.versions.length} 版',
+                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+              ),
+            ],
+          ],
+        ),
         const SizedBox(height: 8),
         _buildVersionsCard(),
-        const SizedBox(height: 24),
-        OutlinedButton.icon(
-          onPressed: () => _deleteQuotation(context),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFEF4444),
-            side: const BorderSide(color: Color(0xFFFECACA)),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-          icon: const Icon(Icons.delete_outline, size: 16),
-          label: const Text('删除该报价'),
-        ),
-        const SizedBox(height: 16),
       ],
     );
   }
@@ -117,14 +116,10 @@ class QuotationDetailScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         // 导出报价单 PDF（US1）
         InkWell(
-          onTap: () => showExportDialog(
-            context,
-            quotationName: quotation.name,
-            version: quotation.version,
-          ),
+          onTap: () => showExportDialog(context, quotation: quotation),
           borderRadius: BorderRadius.circular(8),
           child: Container(
             padding: compact
@@ -159,6 +154,28 @@ class QuotationDetailScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // 删除（顶部显眼入口）
+        Tooltip(
+          message: '删除该报价',
+          child: InkWell(
+            onTap: () => _deleteQuotation(context),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: const Icon(
+                Icons.delete_outline,
+                size: 16,
+                color: Color(0xFFEF4444),
+              ),
+            ),
           ),
         ),
       ],
