@@ -16,7 +16,7 @@ jobs:
           flutter-version: '3.44.8'
 
       - run: cd src/studio && flutter pub get
-      - run: cd src/studio && flutter build web
+      - run: cd src/studio && flutter build web --dart-define=API_BASE=${{ vars.QTBUS_API_BASE }} --dart-define=QTBUS_TOKEN=${{ secrets.QTBUS_TOKEN }}
 
       - uses: manyuanrong/setup-ossutil@v3.0
         with:

@@ -1,0 +1,18 @@
+[Unit]
+Description=qtcloud-business data server (v0.1)
+After=network.target
+
+[Service]
+Type=simple
+# 部署路径按实际调整
+WorkingDirectory=/opt/qtcloud-business/server
+ExecStart=/usr/bin/node /opt/qtcloud-business/server/server.js
+Restart=always
+RestartSec=3
+Environment=PORT=8787
+# 必改：访问令牌，与前端构建时的 QTBUS_TOKEN 保持一致（openssl rand -hex 24 生成）
+Environment=QTBUS_TOKEN=change-me-to-a-random-token
+Environment=QTBUS_DATA_DIR=/opt/qtcloud-business/server/data
+
+[Install]
+WantedBy=multi-user.target

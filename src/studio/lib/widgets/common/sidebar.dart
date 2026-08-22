@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// 全局侧边栏：量 logo + 导航图标 + help，页面共用
+import '../../models/store.dart';
+import 'toast.dart';
+
+/// 全局侧边栏：量 logo + 导航图标 + 刷新 + help，页面共用
 class Sidebar extends StatelessWidget {
   /// 当前激活的路由（用于高亮导航图标）
   final String route;
@@ -46,11 +49,32 @@ class Sidebar extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          _SidebarIcon(
+            Icons.sync,
+            tooltip: '刷新共享数据',
+            onTap: () => _refreshData(context),
+          ),
           const _SidebarIcon(Icons.help_outline),
           const SizedBox(height: 20),
         ],
       ),
     );
+  }
+
+  /// 从服务端拉取他人变更，成功后重建当前页
+  Future<void> _refreshData(BuildContext context) async {
+    final navigator = Navigator.of(context);
+    final unsynced = BusinessStore.instance.hasUnsyncedChanges;
+    final ok = await BusinessStore.instance.refresh();
+    if (!context.mounted) return;
+    if (ok) {
+      showAppToast(context, '已更新为最新共享数据');
+      navigator.pushReplacementNamed(route);
+    } else if (unsynced) {
+      showAppToast(context, '本机有未同步的修改，已保留；恢复网络后重试');
+    } else {
+      showAppToast(context, '刷新失败：无法连接数据服务');
+    }
   }
 }
 

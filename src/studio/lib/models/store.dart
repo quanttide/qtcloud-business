@@ -2,21 +2,28 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/api_client.dart';
 import 'business.dart';
 import 'contract.dart';
 import 'quotation.dart';
 import 'seed.dart';
 
-/// 鍟嗗姟鏁版嵁瀛樺偍锛氶娆″姞杞?seed锛屼箣鍚庢墍鏈夋柊澧?淇敼璁板綍鍦ㄦ湰鍦帮紙localStorage锛?/// 鍒锋柊銆侀噸寮€娴忚鍣ㄦ暟鎹笉涓紱鏈嶅姟绔氨缁悗锛屾寔涔呭眰鎹㈡垚鎺ュ彛璋冪敤
+/// 商务数据存储（v0.1 多人共享）：
+/// 数据源为共享服务端（ApiClient），本机 localStorage 仅作离线缓存。
+/// 服务端不可用时降级为本地缓存/seed 只读模式；有未同步改动时阻止刷新覆盖。
 class BusinessStore {
   BusinessStore._();
 
   static final BusinessStore instance = BusinessStore._();
 
   static const String _prefsKey = 'biz_store_v1';
+  static const String _prefsUnsyncedKey = 'biz_store_v1_unsynced';
 
   BusinessData? _data;
   bool loadFailed = false;
+
+  /// 存在只落在本机、未同步到服务端的改动
+  bool hasUnsyncedChanges = false;
 
   BusinessData get data =>
       _data ??
@@ -24,15 +31,27 @@ class BusinessStore {
 
   Future<BusinessData> load() async {
     if (_data != null) return _data!;
-    // 鏈湴鏈夊瓨妗ｅ垯浼樺厛鐢紙鐢ㄦ埛褰曞叆鐨勬暟鎹級锛涜涓嶅埌锛堝惈娴嬭瘯鐜鏃犲钩鍙伴€氶亾锛夊垯鍥為€€ seed
+    // 1) 服务端为唯一数据源（多人共享）
+    final remote = await ApiClient.instance.getState();
+    if (remote != null) {
+      _data = BusinessData.fromJson(remote);
+      loadFailed = false;
+      hasUnsyncedChanges = false;
+      await _cacheLocal();
+      return _data!;
+    }
+    // 2) 离线降级：本地有缓存用缓存（可继续查看），否则回退 seed
     String? raw;
+    bool unsynced = false;
     try {
       final prefs = await SharedPreferences.getInstance();
       raw = prefs.getString(_prefsKey);
+      unsynced = prefs.getBool(_prefsUnsyncedKey) ?? false;
     } catch (_) {}
     try {
       if (raw != null) {
         _data = BusinessData.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+        hasUnsyncedChanges = unsynced; // 与服务端状态以持久化标记为准
       } else {
         _data = await loadSeedBusiness();
       }
@@ -49,51 +68,100 @@ class BusinessStore {
     return _data!;
   }
 
-  /// 鎸佷箙鍖栧埌 localStorage锛堝け璐ヤ笉褰卞搷涓绘祦绋嬶級
-  Future<void> _persist() async {
+  /// 手动刷新：从服务端拉取最新数据覆盖本地。
+  /// 有未同步的本机改动时拒绝覆盖（避免丢数据），返回 false。
+  Future<bool> refresh() async {
+    if (hasUnsyncedChanges) return false;
+    final remote = await ApiClient.instance.getState();
+    if (remote == null) return false;
+    _data = BusinessData.fromJson(remote);
+    loadFailed = false;
+    await _cacheLocal();
+    return true;
+  }
+
+  /// 同步结果写入本地缓存（失败不影响主流程）
+  Future<void> _cacheLocal() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefsKey, jsonEncode(data.toJson()));
+      await prefs.setBool(_prefsUnsyncedKey, hasUnsyncedChanges);
     } catch (_) {}
   }
 
-  /// 鏂板缓涓氬姟锛堜笟鍔＄粡钀ワ細瀹氫箟涓氬姟锛?  Future<void> addBusiness(Business business) async {
+  /// 新建业务（业务经营：定义业务）
+  Future<void> addBusiness(Business business) async {
     data.businesses.add(business);
-    await _persist();
+    final ok = await ApiClient.instance.saveEntity(
+      'businesses',
+      business.id,
+      business.toJson(),
+      create: true,
+    );
+    if (!ok) hasUnsyncedChanges = true;
+    await _cacheLocal();
   }
 
-  /// 鏂板缓鎶ヤ环锛堣鍗曟壙鎺ワ級锛氭寕鍒版墍灞炰笟鍔″悕涓?  Future<void> addQuotation(Quotation quotation) async {
+  /// 新建报价（订单承接）：挂到所属业务名下
+  Future<void> addQuotation(Quotation quotation) async {
     data.quotations.insert(0, quotation);
-    await _persist();
+    final ok = await ApiClient.instance.saveEntity(
+      'quotations',
+      quotation.id,
+      quotation.toJson(),
+      create: true,
+    );
+    if (!ok) hasUnsyncedChanges = true;
+    await _cacheLocal();
   }
 
-  /// 鐧昏鍚堝悓锛氭寕鍒版墍灞炰笟鍔″悕涓?  Future<void> addContract(Contract contract) async {
+  /// 登记合同：挂到所属业务名下
+  Future<void> addContract(Contract contract) async {
     data.contracts.insert(0, contract);
-    await _persist();
+    final ok = await ApiClient.instance.saveEntity(
+      'contracts',
+      contract.id,
+      contract.toJson(),
+      create: true,
+    );
+    if (!ok) hasUnsyncedChanges = true;
+    await _cacheLocal();
   }
 
-  /// 鏇存柊鍚堝悓锛堜粯娆惧埌璐︽墦鍕剧瓑锛?  Future<void> updateContract(Contract contract) async {
+  /// 更新合同（付款到账打勾等）
+  Future<void> updateContract(Contract contract) async {
     final i = data.contracts.indexWhere((c) => c.id == contract.id);
     if (i != -1) data.contracts[i] = contract;
-    await _persist();
+    final ok = await ApiClient.instance.saveEntity(
+      'contracts',
+      contract.id,
+      contract.toJson(),
+    );
+    if (!ok) hasUnsyncedChanges = true;
+    await _cacheLocal();
   }
-
 
   Future<void> deleteBusiness(String id) async {
     data.businesses.removeWhere((b) => b.id == id);
     data.quotations.removeWhere((q) => q.businessId == id);
     data.contracts.removeWhere((c) => c.businessId == id);
-    await _persist();
+    final ok = await ApiClient.instance.deleteEntity('businesses', id);
+    if (!ok) hasUnsyncedChanges = true;
+    await _cacheLocal();
   }
 
   Future<void> deleteQuotation(String id) async {
     data.quotations.removeWhere((q) => q.id == id);
-    await _persist();
+    final ok = await ApiClient.instance.deleteEntity('quotations', id);
+    if (!ok) hasUnsyncedChanges = true;
+    await _cacheLocal();
   }
 
   Future<void> deleteContract(String id) async {
     data.contracts.removeWhere((c) => c.id == id);
-    await _persist();
+    final ok = await ApiClient.instance.deleteEntity('contracts', id);
+    if (!ok) hasUnsyncedChanges = true;
+    await _cacheLocal();
   }
 
   String nextBusinessId() =>
@@ -109,10 +177,11 @@ class BusinessStore {
     return 'c-2026-${n.toString().padLeft(3, '0')}-new';
   }
 
-  /// 浠庝笟鍔＄殑浠樻鑺傜偣妯℃澘瑙ｆ瀽鑺傜偣锛?绛剧害 50%锛屼氦浠橀獙鏀跺悗 50%" 鈫?涓や釜鑺傜偣锛?  /// 瑙ｆ瀽涓嶅嚭姣斾緥鏃惰鑺傜偣姣斾緥璁?0锛屽彲鎵嬪姩鏀癸紱妯℃澘涓虹┖鍒欑粰鍗曚釜鍏ㄦ鑺傜偣
+  /// 从业务的付款节点模板解析节点（"签约 50%，交付验收后 50%" → 两个节点）
+  /// 解析不出比例时该节点比例记 0，可手动改；模板为空则给单个全款节点
   static List<PaymentNode> paymentNodesFromTerms(String terms) {
     final nodes = <PaymentNode>[];
-    for (final seg in terms.split(RegExp(r'[锛?;锛沒'))) {
+    for (final seg in terms.split(RegExp(r'[，,;；]'))) {
       final s = seg.trim();
       if (s.isEmpty) continue;
       final m = RegExp(r'(\d+(?:\.\d+)?)\s*%').firstMatch(s);
@@ -120,15 +189,16 @@ class BusinessStore {
       final name = m == null ? s : s.replaceFirst(m.group(0)!, '').trim();
       nodes.add(PaymentNode(name: name.isEmpty ? s : name, ratio: ratio));
     }
-    if (nodes.isEmpty) nodes.add(const PaymentNode(name: '鍏ㄦ', ratio: 1.0));
+    if (nodes.isEmpty) nodes.add(const PaymentNode(name: '全款', ratio: 1.0));
     return nodes;
   }
 
-  /// 鎸変笟鍔℃姤浠疯鍒欑敓鎴愪骇鍝佹槑缁嗭紙鎴愭湰娉曪細闃舵宸ユ椂 脳 浜哄ぉ鍗曚环锛?  static List<QuotationProduct> productsFromRule(PricingRule rule) {
+  /// 按业务报价规则生成产品明细（成本法：阶段工时 × 人天单价）
+  static List<QuotationProduct> productsFromRule(PricingRule rule) {
     return rule.stageDefaults
         .map(
           (s) => QuotationProduct(
-            name: '${s.name}锛?{s.workload.toStringAsFixed(1)} 浜哄ぉ锛?,
+            name: '${s.name}（${s.workload.toStringAsFixed(1)} 人天）',
             unitPrice: rule.unitPrice,
             quantity: s.workload,
             discount: 1.0,
