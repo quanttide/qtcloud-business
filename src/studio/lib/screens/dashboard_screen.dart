@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 
 import '../models/business.dart';
+import '../models/history.dart';
 import '../models/seed.dart';
 import '../models/store.dart';
 import '../widgets/cards/contract_card.dart';
@@ -200,7 +201,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 16),
+        const Text(
+          '最近动态',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildHistoryCard(data.history.take(8).toList()),
       ],
+    );
+  }
+
+  // ===== 最近动态（操作留痕） =====
+  Widget _buildHistoryCard(List<HistoryEntry> entries) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: entries.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                '暂无操作记录，新建 / 修改 / 删除都会记录在这里',
+                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              ),
+            )
+          : Column(
+              children: [
+                for (final e in entries)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          switch (e.action) {
+                            '新建' => Icons.add_circle_outline,
+                            '修改' => Icons.edit_outlined,
+                            '删除' => Icons.delete_outline,
+                            _ => Icons.history,
+                          },
+                          size: 16,
+                          color: switch (e.action) {
+                            '新建' => const Color(0xFF10B981),
+                            '修改' => const Color(0xFFF59E0B),
+                            '删除' => const Color(0xFFEF4444),
+                            _ => const Color(0xFF94A3B8),
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '${e.action}${e.entity}「${e.name}」'
+                            '${e.detail.isEmpty ? '' : '，${e.detail}'}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          e.time,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 

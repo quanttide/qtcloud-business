@@ -40,6 +40,7 @@ function initState() {
   if (fs.existsSync(STATE_FILE)) {
     try {
       state = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+      if (!Array.isArray(state.history)) state.history = [];
       console.log(`[store] 已加载 ${STATE_FILE}`);
       return;
     } catch (e) {
@@ -55,6 +56,7 @@ function initState() {
       quotations: Array.isArray(seed.quotations) ? seed.quotations : [],
       contracts: Array.isArray(seed.contracts) ? seed.contracts : [],
       templates: Array.isArray(seed.templates) ? seed.templates : [],
+      history: [],
     };
     console.log(`[store] 以 seed 初始化：${SEED_FILE}`);
   } else {
@@ -85,6 +87,33 @@ function findIndex(list, id) {
 
 function insertFront(list, entity) {
   list.unshift(entity);
+}
+
+/// 操作留痕（可审计）：所有增删改记一笔，最多保留 200 条
+function recordHistory(collection, action, name, extra) {
+  const labels = {
+    businesses: '业务',
+    quotations: '报价',
+    contracts: '合同',
+  };
+  if (!Array.isArray(state.history)) state.history = [];
+  state.history.unshift({
+    time: nowStr(),
+    action,
+    entity: labels[collection] || collection,
+    name: name || '',
+    ...(extra || {}),
+  });
+  if (state.history.length > 200) state.history.length = 200;
+}
+
+function nowStr() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ` +
+    `${p(d.getHours())}:${p(d.getMinutes())}`
+  );
 }
 
 function deleteBusinessCascade(id) {
@@ -190,6 +219,7 @@ async function route(req, res, pathname) {
     }
     return enqueueWrite(() => {
       insertFront(state[collection], entity);
+      recordHistory(collection, '新建', entity.name);
       persistNow();
     }).then(() => sendJson(res, 200, entity));
   }
@@ -204,16 +234,26 @@ async function route(req, res, pathname) {
     return enqueueWrite(() => {
       const j = findIndex(state[collection], idInPath);
       if (j !== -1) state[collection][j] = entity;
+      recordHistory(collection, '修改', entity.name);
       persistNow();
     }).then(() => sendJson(res, 200, entity));
   }
 
   if (method === 'DELETE' && idInPath) {
     if (collection === 'businesses') {
-      const exists = findIndex(state.businesses, idInPath) !== -1;
-      if (!exists) return sendJson(res, 404, { error: `不存在：${idInPath}` });
+      const i = findIndex(state.businesses, idInPath);
+      if (i === -1) return sendJson(res, 404, { error: `不存在：${idInPath}` });
       return enqueueWrite(() => {
-        deleteBusinessCascade(idInPath);
+        const j = findIndex(state.businesses, idInPath);
+        if (j !== -1) {
+          const b = state.businesses[j];
+          const qCount = state.quotations.filter((q) => q.businessId === b.id).length;
+          const cCount = state.contracts.filter((c) => c.businessId === b.id).length;
+          deleteBusinessCascade(idInPath);
+          recordHistory('businesses', '删除', b.name, {
+            detail: `名下 ${qCount} 个报价、${cCount} 个合同一并删除`,
+          });
+        }
         persistNow();
       }).then(() => sendJson(res, 200, { ok: true }));
     }
@@ -221,7 +261,11 @@ async function route(req, res, pathname) {
     if (i === -1) return sendJson(res, 404, { error: `不存在：${idInPath}` });
     return enqueueWrite(() => {
       const j = findIndex(state[collection], idInPath);
-      if (j !== -1) state[collection].splice(j, 1);
+      if (j !== -1) {
+        const e = state[collection][j];
+        state[collection].splice(j, 1);
+        recordHistory(collection, '删除', e.name);
+      }
       persistNow();
     }).then(() => sendJson(res, 200, { ok: true }));
   }

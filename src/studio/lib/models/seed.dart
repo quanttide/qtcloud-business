@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'business.dart';
 import 'contract.dart';
+import 'history.dart';
 import 'quotation.dart';
 import 'template.dart';
 
@@ -14,6 +15,7 @@ class BusinessData {
     required this.quotations,
     required this.contracts,
     required this.templates,
+    this.history = const [],
   });
 
   factory BusinessData.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,9 @@ class BusinessData {
       templates: (json['templates'] as List<dynamic>? ?? [])
           .map((e) => BusinessTemplate.fromJson(e as Map<String, dynamic>))
           .toList(),
+      history: (json['history'] as List<dynamic>? ?? [])
+          .map((e) => HistoryEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -38,6 +43,9 @@ class BusinessData {
   final List<Quotation> quotations;
   final List<Contract> contracts;
   final List<BusinessTemplate> templates;
+
+  /// 操作历史（服务端记录，最新在前）
+  final List<HistoryEntry> history;
 
   List<BusinessTemplate> get quotationTemplates =>
       templates.where((t) => t.isQuotation).toList();
@@ -63,6 +71,7 @@ class BusinessData {
     'quotations': quotations.map((e) => e.toJson()).toList(),
     'contracts': contracts.map((e) => e.toJson()).toList(),
     'templates': templates.map((e) => e.toJson()).toList(),
+    'history': history.map((e) => e.toJson()).toList(),
   };
 }
 
