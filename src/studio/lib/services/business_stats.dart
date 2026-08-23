@@ -117,6 +117,49 @@ List<CalibrationAdvice> buildCalibrationAdvice(
   return advices;
 }
 
+/// 章程执行率汇总（需求七）：全部订单检查项的完成比例
+class ChecklistSummary {
+  const ChecklistSummary({
+    required this.totalItems,
+    required this.doneItems,
+    required this.orderCount,
+  });
+
+  /// 检查项总数
+  final int totalItems;
+
+  /// 已完成项数
+  final int doneItems;
+
+  /// 涉及订单数
+  final int orderCount;
+
+  /// 完成比例（0~1）
+  double get completion =>
+      totalItems == 0 ? 0 : (doneItems / totalItems).clamp(0, 1);
+}
+
+ChecklistSummary summarizeChecklists(BusinessData data) {
+  var total = 0;
+  var done = 0;
+  var orders = 0;
+  for (final c in data.contracts) {
+    // 已归档订单不再计入执行率
+    if (c.status == '已归档') continue;
+    if (c.checklist.isEmpty) continue;
+    orders++;
+    for (final item in c.checklist) {
+      total++;
+      if (item.status == 'done') done++;
+    }
+  }
+  return ChecklistSummary(
+    totalItems: total,
+    doneItems: done,
+    orderCount: orders,
+  );
+}
+
 /// 汇总某业务名下全部订单的经营指标
 BusinessStats computeBusinessStats(
   BusinessData data,

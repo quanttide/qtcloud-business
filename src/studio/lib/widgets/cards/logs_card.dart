@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/log_entry.dart';
+import '../../services/identity.dart';
 
 /// 往来留痕卡（书面确认优先）：登记邮件确认/电话沟通/会议纪要/变更协议
 class LogsCard extends StatelessWidget {
@@ -49,7 +50,9 @@ class LogsCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${log.type} · ${log.date}',
+                          log.by.isEmpty
+                              ? '${log.type} · ${log.date}'
+                              : '${log.type} · ${log.date} · ${log.by}',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -132,7 +135,14 @@ class _LogEntryDialogState extends State<_LogEntryDialog> {
       return;
     }
     final today = DateTime.now().toIso8601String().substring(0, 10);
-    Navigator.of(context).pop(LogEntry(date: today, type: _type, note: note));
+    Navigator.of(context).pop(
+      LogEntry(
+        date: today,
+        type: _type,
+        note: note,
+        by: Identity.current,
+      ),
+    );
   }
 
   @override

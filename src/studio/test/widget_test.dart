@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:qtcloud_business_studio/models/business.dart';
 import 'package:qtcloud_business_studio/models/contract.dart';
+import 'package:qtcloud_business_studio/models/history.dart';
 import 'package:qtcloud_business_studio/models/log_entry.dart';
 import 'package:qtcloud_business_studio/models/quotation.dart';
 import 'package:qtcloud_business_studio/models/seed.dart';
@@ -747,6 +748,112 @@ void main() {
       expect(saved.client, '检查项客户');
       expect(saved.checklist.length, 5);
       expect(saved.checklist.every((c) => c.status == 'todo'), isTrue);
+    });
+  });
+
+  group('章程执行率与操作人署名（需求六+七）', () {
+    Fulfillment item(String name, String status) => Fulfillment(
+          name: name,
+          status: status,
+          date: status == 'done' ? '2026-08-20' : '',
+        );
+
+    Contract contractWithChecklist({
+      required String id,
+      List<Fulfillment> checklist = const [],
+      String status = '已签署',
+    }) =>
+        Contract(
+          id: id,
+          businessId: 'biz-x',
+          name: '订单$id',
+          client: 'c',
+          template: '',
+          status: status,
+          amount: 10,
+          created: '2026-07-01',
+          signed: '2026-07-02',
+          fulfillments: const [],
+          payments: const [],
+          checklist: checklist,
+        );
+
+    test('执行率：只统计在办订单，已归档与空检查项不计入', () {
+      final data = BusinessData(
+        businesses: const [],
+        templates: const [],
+        quotations: const [],
+        contracts: [
+          contractWithChecklist(
+            id: 'a',
+            checklist: [item('策划书确认', 'done'), item('报价确认', 'todo')],
+          ),
+          // 已归档不计入
+          contractWithChecklist(
+            id: 'b',
+            status: '已归档',
+            checklist: [item('交付确认', 'todo')],
+          ),
+          // 无检查项的订单不计入
+          contractWithChecklist(id: 'c'),
+        ],
+      );
+
+      final s = summarizeChecklists(data);
+      expect(s.totalItems, 2);
+      expect(s.doneItems, 1);
+      expect(s.orderCount, 1);
+      expect(s.completion, closeTo(0.5, 0.001));
+    });
+
+    test('留痕操作人字段 JSON 往返（LogEntry / HistoryEntry）', () {
+      final log = LogEntry(date: '2026-08-23', type: '邮件确认', note: '确认方案', by: '张三');
+      final logBack = LogEntry.fromJson(
+        jsonDecode(jsonEncode(log.toJson())) as Map<String, dynamic>,
+      );
+      expect(logBack.by, '张三');
+
+      // 无 by 的旧数据兼容
+      final legacy = LogEntry.fromJson({'date': '2026-08-23', 'type': '电话沟通', 'note': 'x'});
+      expect(legacy.by, '');
+
+      final history = HistoryEntry(time: '2026-08-23 10:00', action: '修改', entity: '合同', name: 'n', by: '李四');
+      final hBack = HistoryEntry.fromJson(
+        jsonDecode(jsonEncode(history.toJson())) as Map<String, dynamic>,
+      );
+      expect(hBack.by, '李四');
+    });
+
+    testWidgets('工作台显示操作人署名入口与默认未署名', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: DashboardScreen()));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 2)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('操作人：'), findsOneWidget);
+
+      // 点开弹窗可编辑
+      await tester.tap(find.textContaining('操作人：'));
+      await tester.pumpAndSettle();
+      expect(find.text('操作人署名'), findsOneWidget);
+    });
+
+    testWidgets('工作台在有检查项时显示章程执行率条', (tester) async {
+      final data = loadTestSeed();
+      data.contracts[0] = contractWithChecklist(
+        id: data.contracts.first.id,
+        checklist: [item('策划书确认（书面）', 'done'), item('进度汇报', 'done')],
+      );
+      BusinessStore.instance.seedForTest(data);
+      await tester.pumpWidget(const MaterialApp(home: DashboardScreen()));
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 2)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('章程执行率'), findsOneWidget);
+      expect(find.text('100%（2/2 项 · 1 个在办订单）'), findsOneWidget);
     });
   });
 }

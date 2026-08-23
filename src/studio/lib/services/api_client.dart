@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'identity.dart';
+
 /// 共享数据服务客户端：地址与令牌由构建期注入
 ///
 /// 本地开发默认 http://localhost:8787/api；
@@ -23,6 +25,9 @@ class ApiClient {
   Map<String, String> get _headers => {
     'Content-Type': 'application/json; charset=utf-8',
     if (_token.isNotEmpty) 'X-Auth-Token': _token,
+    // 操作人署名（需求六最小闭环）：服务端记入操作历史
+    if (Identity.current.isNotEmpty)
+      'X-Operator': Uri.encodeComponent(Identity.current),
   };
 
   Uri _uri(String path) => Uri.parse('$_base/$path');

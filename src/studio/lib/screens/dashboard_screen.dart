@@ -4,7 +4,10 @@ import '../models/business.dart';
 import '../models/history.dart';
 import '../models/seed.dart';
 import '../models/store.dart';
+import '../services/business_stats.dart';
 import '../services/follow_up.dart';
+import '../services/identity.dart';
+import '../widgets/common/toast.dart';
 import '../widgets/cards/contract_card.dart';
 import '../widgets/cards/quotation_card.dart';
 import '../widgets/common/responsive.dart';
@@ -84,13 +87,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '商务工作台',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1E293B),
-            ),
+          Row(
+            children: [
+              const Text(
+                '商务工作台',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const Spacer(),
+              // 当前操作人（需求六：留痕署名）
+              InkWell(
+                onTap: _editOperator,
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: Color(0xFF475569),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '操作人：${Identity.displayName}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF475569),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           const Text(
@@ -102,6 +145,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  /// 修改操作人署名
+  Future<void> _editOperator() async {
+    final ctrl = TextEditingController(text: Identity.current);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '操作人署名',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '留痕与操作历史将记录此名字（存本机）',
+                style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: '如：张三',
+                  hintStyle:
+                      const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 10,
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('取消'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () =>
+                          Navigator.of(context).pop(ctrl.text.trim()),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF4F46E5),
+                      ),
+                      child: const Text('保存'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (name == null) return;
+    await Identity.save(name);
+    if (mounted) {
+      showAppToast(context, name.isEmpty ? '已清除署名' : '✅ 操作人：$name');
+    }
   }
 
   Widget _buildContent() {
@@ -117,6 +241,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ListView(
       children: [
         _buildStatCards(data),
+        const SizedBox(height: 12),
+        _buildChecklistBanner(data),
         const SizedBox(height: 16),
         ..._buildFollowUps(data),
         _buildSectionHeader(
@@ -343,9 +469,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  // ===== 章程执行率（需求七：底线统一执行的量化） =====
+  Widget _buildChecklistBanner(BusinessData data) {
+    final s = summarizeChecklists(data);
+    if (s.totalItems == 0) return const SizedBox.shrink();
+    final pct = (s.completion * 100).toStringAsFixed(0);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            s.completion >= 1
+                ? Icons.verified_outlined
+                : Icons.checklist_rtl,
+            size: 16,
+            color: s.completion >= 1
+                ? const Color(0xFF10B981)
+                : const Color(0xFF4F46E5),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            '章程执行率',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: s.completion,
+                minHeight: 6,
+                backgroundColor: const Color(0xFFF1F5F9),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  s.completion >= 1
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFF4F46E5),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            '$pct%（${s.doneItems}/${s.totalItems} 项 · ${s.orderCount} 个在办订单）',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ===== 最近动态（操作留痕） =====
-  String? _businessNameOf(BusinessData data, String businessId) {
-    if (businessId.isEmpty) return null;
+  String? _businessNameOf(BusinessData data, String businessId) {    if (businessId.isEmpty) return null;
     for (final b in data.businesses) {
       if (b.id == businessId) return b.name;
     }
@@ -393,7 +576,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: Text(
                             '${e.action}${e.entity}「${e.name}」'
-                            '${e.detail.isEmpty ? '' : '，${e.detail}'}',
+                            '${e.detail.isEmpty ? '' : '，${e.detail}'}'
+                            '${e.by.isEmpty ? '' : ' · ${e.by}'}',
                             style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF1E293B),

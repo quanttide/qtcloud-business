@@ -1,4 +1,4 @@
-/// 操作留痕：一条历史记录（谁在系统里做了什么由服务端记录，v0.1 无用户体系）
+/// 操作留痕：一条历史记录（服务端记录，操作人来自请求头署名）
 class HistoryEntry {
   const HistoryEntry({
     required this.time,
@@ -6,6 +6,7 @@ class HistoryEntry {
     required this.entity,
     required this.name,
     this.detail = '',
+    this.by = '',
   });
 
   factory HistoryEntry.fromJson(Map<String, dynamic> json) => HistoryEntry(
@@ -14,6 +15,7 @@ class HistoryEntry {
     entity: json['entity'] as String? ?? '',
     name: json['name'] as String? ?? '',
     detail: json['detail'] as String? ?? '',
+    by: json['by'] as String? ?? '',
   );
 
   final String time;
@@ -22,11 +24,15 @@ class HistoryEntry {
   final String name;
   final String detail;
 
+  /// 操作人（需求六最小闭环）
+  final String by;
+
   Map<String, dynamic> toJson() => {
     'time': time,
     'action': action,
     'entity': entity,
     'name': name,
     if (detail.isNotEmpty) 'detail': detail,
+    if (by.isNotEmpty) 'by': by,
   };
 }

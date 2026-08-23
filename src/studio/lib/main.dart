@@ -4,8 +4,11 @@ import 'screens/business_list_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/quotation_list_screen.dart';
 import 'screens/contract_list_screen.dart';
+import 'services/identity.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Identity.load();
   runApp(const _App());
 }
 

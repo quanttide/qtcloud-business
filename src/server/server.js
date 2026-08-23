@@ -90,7 +90,7 @@ function insertFront(list, entity) {
 }
 
 /// 操作留痕（可审计）：所有增删改记一笔，最多保留 200 条
-function recordHistory(collection, action, name, extra) {
+function recordHistory(collection, action, name, extra, by) {
   const labels = {
     businesses: '业务',
     quotations: '报价',
@@ -102,9 +102,21 @@ function recordHistory(collection, action, name, extra) {
     action,
     entity: labels[collection] || collection,
     name: name || '',
+    ...(by ? { by } : {}),
     ...(extra || {}),
   });
   if (state.history.length > 200) state.history.length = 200;
+}
+
+/// 从请求头读取操作人署名（需求六最小闭环）
+function operatorOf(req) {
+  const raw = req.headers['x-operator'];
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(String(raw)).slice(0, 30);
+  } catch {
+    return String(raw).slice(0, 30);
+  }
 }
 
 function nowStr() {
@@ -137,7 +149,7 @@ function corsPreflight(res) {
   res.writeHead(204, {
     'Access-Control-Allow-Origin': CORS_ORIGIN,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Auth-Token, X-Operator',
     'Access-Control-Max-Age': '86400',
   });
   res.end();
@@ -219,7 +231,7 @@ async function route(req, res, pathname) {
     }
     return enqueueWrite(() => {
       insertFront(state[collection], entity);
-      recordHistory(collection, '新建', entity.name);
+      recordHistory(collection, '新建', entity.name, null, operatorOf(req));
       persistNow();
     }).then(() => sendJson(res, 200, entity));
   }
@@ -234,7 +246,7 @@ async function route(req, res, pathname) {
     return enqueueWrite(() => {
       const j = findIndex(state[collection], idInPath);
       if (j !== -1) state[collection][j] = entity;
-      recordHistory(collection, '修改', entity.name);
+      recordHistory(collection, '修改', entity.name, null, operatorOf(req));
       persistNow();
     }).then(() => sendJson(res, 200, entity));
   }
@@ -252,7 +264,7 @@ async function route(req, res, pathname) {
           deleteBusinessCascade(idInPath);
           recordHistory('businesses', '删除', b.name, {
             detail: `名下 ${qCount} 个报价、${cCount} 个合同一并删除`,
-          });
+          }, operatorOf(req));
         }
         persistNow();
       }).then(() => sendJson(res, 200, { ok: true }));
@@ -264,7 +276,7 @@ async function route(req, res, pathname) {
       if (j !== -1) {
         const e = state[collection][j];
         state[collection].splice(j, 1);
-        recordHistory(collection, '删除', e.name);
+        recordHistory(collection, '删除', e.name, null, operatorOf(req));
       }
       persistNow();
     }).then(() => sendJson(res, 200, { ok: true }));
