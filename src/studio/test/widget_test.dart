@@ -16,7 +16,10 @@ import 'package:qtcloud_business_studio/screens/dashboard_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_detail_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_edit_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_list_screen.dart';
+import 'package:qtcloud_business_studio/screens/business_detail_screen.dart';
+import 'package:qtcloud_business_studio/services/business_stats.dart';
 import 'package:qtcloud_business_studio/services/follow_up.dart';
+import 'package:qtcloud_business_studio/services/pdf_export.dart';
 
 /// 从仓库 seed JSON 同步构造测试用 BusinessData。
 ///
@@ -492,6 +495,135 @@ void main() {
       // 留痕卡与退场中的弹窗可能同时短暂可见
       expect(find.textContaining('报价 v2 已邮件确认'), findsWidgets);
       expect(find.textContaining('✅ 已登记留痕'), findsOneWidget);
+    });
+  });
+
+  group('数据回流：业务经营统计（需求五）', () {
+    final today = DateTime(2026, 8, 23);
+    String daysAgo(int n) =>
+        today.subtract(Duration(days: n)).toIso8601String().substring(0, 10);
+
+    Quotation quotation(String status, String updated) => Quotation(
+          id: 'q',
+          businessId: 'biz-x',
+          name: 'n',
+          client: 'c',
+          template: '',
+          status: status,
+          version: 1,
+          created: daysAgo(60),
+          updated: updated,
+          pricingNote: '',
+          products: const [],
+          totalAmount: 3,
+          versions: const [],
+        );
+
+    Contract contract({
+      double amount = 10,
+      String signed = '',
+      List<PaymentNode> payments = const [],
+    }) =>
+        Contract(
+          id: 'c',
+          businessId: 'biz-x',
+          name: 'n',
+          client: 'c',
+          template: '',
+          status: '已签署',
+          amount: amount,
+          created: daysAgo(45),
+          signed: signed,
+          fulfillments: const [],
+          payments: payments,
+        );
+
+    test('转化率、回款周期、超期应收、沉睡草稿计算正确', () {
+      final stats = computeBusinessStats(
+        BusinessData(
+          businesses: const [],
+          templates: const [],
+          quotations: [
+            quotation('已确认', daysAgo(40)),
+            quotation('草稿', daysAgo(31)), // 沉睡
+            Quotation(
+              id: 'q-other',
+              businessId: 'biz-other',
+              name: 'n',
+              client: 'c',
+              template: '',
+              status: '草稿',
+              version: 1,
+              created: daysAgo(60),
+              updated: daysAgo(60),
+              pricingNote: '',
+              products: const [],
+              totalAmount: 3,
+              versions: const [],
+            ), // 别的业务的报价不计入
+          ],
+          contracts: [
+            // 签约 40 天前，35 天前到账一半 → 周期 5 天；剩一半超期未收
+            contract(
+              signed: daysAgo(40),
+              payments: [
+                PaymentNode(name: '签约款', ratio: 0.5, received: true, date: daysAgo(35)),
+                PaymentNode(name: '尾款', ratio: 0.5),
+              ],
+            ),
+            // 待签署不计回款周期，金额计入总额
+            contract(amount: 20),
+          ],
+        ),
+        'biz-x',
+        now: today,
+      );
+
+      expect(stats.quotationCount, 2);
+      expect(stats.contractCount, 2);
+      expect(stats.contractAmount, 30);
+      expect(stats.receivedAmount, 5);
+      expect(stats.avgCollectionDays, 5);
+      expect(stats.overdueReceivable, 5); // 尾款 50% × 10 万，签约超 30 天
+      expect(stats.staleQuotationCount, 1);
+      expect(stats.conversionRate, closeTo(1.0, 0.001));
+    });
+
+    testWidgets('业务详情显示经营复盘卡', (tester) async {
+      final data = loadTestSeed();
+      BusinessStore.instance.seedForTest(data);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BusinessDetailScreen(
+            business: data.businesses.first,
+            data: data,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find
+          .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+          .first;
+      await tester.scrollUntilVisible(
+        find.text('经营复盘'),
+        200,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('经营复盘'), findsOneWidget);
+      expect(find.text('合同总额'), findsOneWidget);
+      expect(find.text('已到账'), findsOneWidget);
+      expect(find.text('报价转化'), findsOneWidget);
+      expect(find.textContaining('平均回款周期'), findsOneWidget);
+    });
+
+    test('订单归档 PDF 可生成且包含关键信息', () async {
+      final data = loadTestSeed();
+      final c = data.contracts.first;
+      final bytes = await buildContractArchivePdf(c, businessName: '数据服务');
+      expect(bytes.lengthInBytes, greaterThan(1000));
     });
   });
 }

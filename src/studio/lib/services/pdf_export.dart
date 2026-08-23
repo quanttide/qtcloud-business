@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../models/contract.dart';
 import '../models/quotation.dart';
 
 export 'pdf_downloader_stub.dart'
@@ -289,6 +290,253 @@ Future<Uint8List> buildQuotationPdf(Quotation quotation) async {
 Future<String> exportQuotationPdf(Quotation quotation) async {
   final bytes = await buildQuotationPdf(quotation);
   final filename = '报价单-${quotation.name}-v${quotation.version}.pdf';
+  downloadPdf(bytes, filename);
+  return filename;
+}
+
+/// 生成订单归档 PDF（需求四：按单归档——合同信息+付款+履约+交付+留痕，支撑审计）
+Future<Uint8List> buildContractArchivePdf(
+  Contract contract, {
+  String businessName = '',
+}) async {
+  await _ensureFont();
+  final font = _font!;
+
+  const indigo = PdfColor.fromInt(0xFF4F46E5);
+  const slate = PdfColor.fromInt(0xFF64748B);
+  const ink = PdfColor.fromInt(0xFF1E293B);
+  const light = PdfColor.fromInt(0xFFF1F5F9);
+  const line = PdfColor.fromInt(0xFFE2E8F0);
+
+  pw.TextStyle ts({
+    double size = 10,
+    bool bold = false,
+    PdfColor? color,
+  }) => pw.TextStyle(
+    fontSize: size,
+    fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+    color: color ?? ink,
+  );
+
+  pw.Widget cell(String text, {bool bold = false, PdfColor? color}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(vertical: 3),
+      child: pw.Text(text, style: ts(bold: bold, color: color)),
+    );
+  }
+
+  String fulfillmentLabel(String status) {
+    switch (status) {
+      case 'done':
+        return '已完成';
+      case 'active':
+        return '进行中';
+      default:
+        return '待办';
+    }
+  }
+
+  final doc = pw.Document(theme: pw.ThemeData.withFont(base: font, bold: font));
+
+  doc.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.fromLTRB(48, 44, 48, 36),
+      build: (context) => [
+        // 抬头
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          children: [
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('量潮', style: ts(size: 26, bold: true, color: indigo)),
+                pw.SizedBox(height: 2),
+                pw.Text('QUANTTIDE', style: ts(size: 9, color: slate)),
+              ],
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Text('订单归档', style: ts(size: 22, bold: true)),
+                pw.SizedBox(height: 2),
+                pw.Text('CONTRACT ARCHIVE', style: ts(size: 9, color: slate)),
+              ],
+            ),
+          ],
+        ),
+        pw.Divider(color: indigo, thickness: 1.5),
+        pw.SizedBox(height: 12),
+
+        // 基本信息
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  cell('合同编号：${contract.id}'),
+                  cell('客户名称：${contract.client}'),
+                  cell(
+                    '所属业务：${businessName.isEmpty ? '—' : businessName}',
+                  ),
+                  cell('签署日期：${contract.signed.isEmpty ? '未签署' : contract.signed}'),
+                ],
+              ),
+            ),
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  cell('合同名称：${contract.name}'),
+                  cell('合同模板：${contract.template.isEmpty ? '—' : contract.template}'),
+                  cell('当前状态：${contract.status}'),
+                  cell('创建日期：${contract.created}'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: const pw.BoxDecoration(color: light),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                '合同金额（大写）：${moneyUpper(contract.amount)}',
+                style: ts(bold: true),
+              ),
+              pw.Text(
+                '￥ ${contract.amount.toStringAsFixed(2)} 万元',
+                style: ts(size: 13, bold: true, color: indigo),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 16),
+
+        // 付款节点
+        if (contract.payments.isNotEmpty) ...[
+          pw.Text('付款到账', style: ts(size: 11, bold: true)),
+          pw.SizedBox(height: 4),
+          pw.TableHelper.fromTextArray(
+            border: pw.TableBorder.all(color: line, width: 0.5),
+            headerDecoration: const pw.BoxDecoration(color: light),
+            headerStyle: ts(bold: true),
+            cellStyle: ts(),
+            cellAlignment: pw.Alignment.centerLeft,
+            cellPadding:
+                const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            headers: ['付款节点', '比例', '金额（万元）', '是否到账', '到账日期'],
+            data: [
+              for (final p in contract.payments)
+                [
+                  p.name,
+                  '${(p.ratio * 100).toStringAsFixed(0)}%',
+                  (p.ratio * contract.amount).toStringAsFixed(2),
+                  p.received ? '已到账' : '未到账',
+                  p.date.isEmpty ? '—' : p.date,
+                ],
+              [
+                '合计',
+                '${(contract.payments.fold<double>(0, (s, p) => s + p.ratio) * 100).toStringAsFixed(0)}%',
+                contract.amount.toStringAsFixed(2),
+                '已收 ${contract.receivedAmount.toStringAsFixed(2)}',
+                '—',
+              ],
+            ],
+          ),
+          pw.SizedBox(height: 16),
+        ],
+
+        // 履约进度
+        if (contract.fulfillments.isNotEmpty) ...[
+          pw.Text('履约进度', style: ts(size: 11, bold: true)),
+          pw.SizedBox(height: 4),
+          ...contract.fulfillments.map(
+            (f) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 3),
+              child: pw.Text(
+                '· ${f.name}｜${fulfillmentLabel(f.status)}'
+                '${f.date.isEmpty ? '' : '｜${f.date}'}',
+                style: ts(color: slate),
+              ),
+            ),
+          ),
+          pw.SizedBox(height: 16),
+        ],
+
+        // 交付与验收
+        if (contract.deliverables.isNotEmpty) ...[
+          pw.Text('交付与验收', style: ts(size: 11, bold: true)),
+          pw.SizedBox(height: 4),
+          pw.TableHelper.fromTextArray(
+            border: pw.TableBorder.all(color: line, width: 0.5),
+            headerDecoration: const pw.BoxDecoration(color: light),
+            headerStyle: ts(bold: true),
+            cellStyle: ts(),
+            cellAlignment: pw.Alignment.centerLeft,
+            cellPadding:
+                const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            headers: ['交付物', '状态', '验收日期'],
+            data: [
+              for (final d in contract.deliverables)
+                [
+                  d.name,
+                  fulfillmentLabel(d.status),
+                  d.date.isEmpty ? '—' : d.date,
+                ],
+            ],
+          ),
+          pw.SizedBox(height: 16),
+        ],
+
+        // 往来留痕
+        if (contract.logs.isNotEmpty) ...[
+          pw.Text('往来留痕', style: ts(size: 11, bold: true)),
+          pw.SizedBox(height: 4),
+          pw.TableHelper.fromTextArray(
+            border: pw.TableBorder.all(color: line, width: 0.5),
+            headerDecoration: const pw.BoxDecoration(color: light),
+            headerStyle: ts(bold: true),
+            cellStyle: ts(),
+            cellAlignment: pw.Alignment.centerLeft,
+            cellPadding:
+                const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            headers: ['日期', '类型', '内容说明'],
+            data: [
+              for (final l in contract.logs.reversed)
+                [l.date, l.type, l.note.isEmpty ? '—' : l.note],
+            ],
+          ),
+        ],
+
+        pw.SizedBox(height: 24),
+        pw.Align(
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            '导出时间：${today()} ｜ 本档案由量潮商务云自动汇总 ｜ quanttide.com',
+            style: ts(size: 8, color: slate),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  return doc.save();
+}
+
+/// 导出并触发浏览器下载订单归档 PDF（Web）
+Future<String> exportContractArchivePdf(
+  Contract contract, {
+  String businessName = '',
+}) async {
+  final bytes = await buildContractArchivePdf(contract, businessName: businessName);
+  final filename = '订单归档-${contract.name}-${contract.id}.pdf';
   downloadPdf(bytes, filename);
   return filename;
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/contract.dart';
 import '../models/log_entry.dart';
 import '../models/store.dart';
+import '../services/pdf_export.dart';
 import '../widgets/cards/logs_card.dart';
 import '../widgets/common/responsive.dart';
 import '../widgets/common/sidebar.dart';
@@ -284,6 +285,28 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
           ),
         ),
         const SizedBox(width: 8),
+        // 按单归档导出（需求四：订单档案支撑审计）
+        Tooltip(
+          message: '导出订单归档 PDF',
+          child: InkWell(
+            onTap: _exportArchive,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Icon(
+                Icons.archive_outlined,
+                size: 16,
+                color: Color(0xFF475569),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
         // 删除（顶部显眼入口）
         Tooltip(
           message: '删除该合同',
@@ -329,6 +352,22 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
     if (!ok || !mounted) return;
     await BusinessStore.instance.deleteContract(contract.id);
     if (mounted) Navigator.of(context).pop();
+  }
+
+  /// 按单归档：导出合同信息+付款+履约+交付+留痕的汇总 PDF
+  Future<void> _exportArchive() async {
+    var businessName = '';
+    for (final b in BusinessStore.instance.data.businesses) {
+      if (b.id == contract.businessId) {
+        businessName = b.name;
+        break;
+      }
+    }
+    final filename = await exportContractArchivePdf(
+      contract,
+      businessName: businessName,
+    );
+    if (mounted) showAppToast(context, '📄 已导出归档：$filename');
   }
 
   /// 收款与结项：全部到账后归档结项（订单档案留存，支撑审计与复盘）

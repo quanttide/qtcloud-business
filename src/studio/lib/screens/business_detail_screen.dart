@@ -3,6 +3,7 @@
 import '../models/business.dart';
 import '../models/seed.dart';
 import '../models/store.dart';
+import '../services/business_stats.dart';
 import '../widgets/cards/contract_card.dart';
 import '../widgets/cards/quotation_card.dart';
 import '../widgets/common/responsive.dart';
@@ -170,6 +171,8 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
               children: [
                 _buildPricingRuleCard(),
                 const SizedBox(height: 16),
+                _buildStatsCard(data),
+                const SizedBox(height: 16),
                 _buildSectionTitle('名下合同（${contracts.length}）'),
                 const SizedBox(height: 8),
                 ...contracts.map(
@@ -236,6 +239,89 @@ class _BusinessDetailScreenState extends State<BusinessDetailScreen> {
     if (!ok || !mounted) return;
     await BusinessStore.instance.deleteBusiness(business.id);
     if (mounted) Navigator.of(context).pop();
+  }
+
+  // ===== 经营统计卡（需求五：数据回流） =====
+  Widget _buildStatsCard(BusinessData data) {
+    final business = widget.business;
+    final stats = computeBusinessStats(data, business.id);
+    final collection = stats.avgCollectionDays;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                '经营复盘',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '订单数据回流业务 · 复盘校准的依据',
+                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _ruleStat('合同总额', '${stats.contractAmount.toStringAsFixed(1)} 万'),
+              _ruleStat('已到账', '${stats.receivedAmount.toStringAsFixed(1)} 万'),
+              _ruleStat(
+                '报价转化',
+                '${stats.contractCount}/${stats.quotationCount} 单'
+                '（${(stats.conversionRate * 100).toStringAsFixed(0)}%）',
+              ),
+              _ruleStat(
+                '平均回款周期',
+                collection == null ? '—' : '${collection.toStringAsFixed(0)} 天',
+              ),
+            ],
+          ),
+          if (stats.overdueReceivable > 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '🔴 超期应收 ${stats.overdueReceivable.toStringAsFixed(1)} 万元：签约超 30 天仍有款项未到账，请催收。',
+                style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)),
+              ),
+            ),
+          ],
+          if (stats.staleQuotationCount > 0) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '🟡 ${stats.staleQuotationCount} 份报价草稿超 30 天无进展，考虑跟进或放弃。',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   // ===== 报价规则卡片 =====
