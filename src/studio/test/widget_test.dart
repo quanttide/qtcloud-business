@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:qtcloud_business_studio/models/business.dart';
 import 'package:qtcloud_business_studio/models/contract.dart';
+import 'package:qtcloud_business_studio/models/quotation.dart';
 import 'package:qtcloud_business_studio/models/seed.dart';
 import 'package:qtcloud_business_studio/models/store.dart';
 import 'package:qtcloud_business_studio/screens/contract_detail_screen.dart';
@@ -13,6 +14,7 @@ import 'package:qtcloud_business_studio/screens/dashboard_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_detail_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_edit_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_list_screen.dart';
+import 'package:qtcloud_business_studio/services/follow_up.dart';
 
 /// 从仓库 seed JSON 同步构造测试用 BusinessData。
 ///
@@ -129,8 +131,15 @@ void main() {
     expect(find.text('客户签署'), findsOneWidget);
     expect(find.text('合同归档'), findsOneWidget);
 
-    // 待签署合同显示提醒按钮（页面较长，先滚动到按钮再点）
-    await tester.ensureVisible(find.text('提醒客户签署'));
+    // 待签署合同显示提醒按钮（页面较长且懒加载，先滚动到按钮再点）
+    final detailScrollable = find
+        .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(
+      find.text('提醒客户签署'),
+      150,
+      scrollable: detailScrollable,
+    );
     await tester.pumpAndSettle();
     expect(find.text('提醒客户签署'), findsOneWidget);
     await tester.tap(find.text('提醒客户签署'));
@@ -282,5 +291,99 @@ void main() {
     await tester.tap(find.text('保存报价'));
     await tester.pump();
     expect(find.textContaining('订单必须挂在业务下'), findsOneWidget);
+  });
+
+  group('时限跟进引擎（需求四：中游机制）', () {
+    final today = DateTime(2026, 8, 22);
+    String daysAgo(int n) =>
+        today.subtract(Duration(days: n)).toIso8601String().substring(0, 10);
+
+    Quotation quotation({required String updated, String status = '草稿'}) =>
+        Quotation(
+          id: 'q-t',
+          businessId: 'biz-data',
+          name: '测试报价',
+          client: '客户甲',
+          template: '',
+          status: status,
+          version: 1,
+          created: daysAgo(9),
+          updated: updated,
+          pricingNote: '',
+          products: const [],
+          totalAmount: 1,
+          versions: const [],
+        );
+
+    Contract contract({
+      String status = '待签署',
+      String signed = '',
+      List<PaymentNode> payments = const [],
+    }) =>
+        Contract(
+          id: 'c-t',
+          businessId: 'biz-data',
+          name: '测试合同',
+          client: '客户甲',
+          template: '',
+          status: status,
+          amount: 10,
+          created: daysAgo(9),
+          signed: signed,
+          fulfillments: const [],
+          payments: payments,
+        );
+
+    test('报价超 48 小时未动 → 跟进提醒；已确认不提醒', () {
+      final items = collectFollowUps(
+        BusinessData(
+          businesses: const [],
+          templates: const [],
+          quotations: [
+            quotation(updated: daysAgo(3)),
+            quotation(updated: daysAgo(1)),
+            quotation(updated: daysAgo(30), status: '已确认'),
+          ],
+          contracts: const [],
+        ),
+        now: today,
+      );
+      expect(items.length, 1);
+      expect(items.single.kind, '报价跟进');
+      expect(items.single.title, contains('3 天没有进展'));
+    });
+
+    test('待签署超 3 天提醒；签约超 7 天未到账催收；结清提示可结项', () {
+      final items = collectFollowUps(
+        BusinessData(
+          businesses: const [],
+          quotations: const [],
+          templates: const [],
+          contracts: [
+            contract(), // 待签署 created 9 天前
+            contract(
+              status: '已签署',
+              signed: daysAgo(8),
+              payments: const [
+                PaymentNode(name: '签约款', ratio: 0.5),
+                PaymentNode(name: '尾款', ratio: 0.5),
+              ],
+            ),
+            contract(
+              status: '已签署',
+              signed: daysAgo(8),
+              payments: [
+                PaymentNode(name: '全款', ratio: 1.0, received: true, date: daysAgo(2)),
+              ],
+            ),
+            contract(status: '已归档', signed: daysAgo(20)), // 归档不催收
+          ],
+        ),
+        now: today,
+      );
+      expect(items.map((e) => e.kind), containsAll(['签署跟进', '尾款催收', '可结项']));
+      expect(items.where((e) => e.kind == '尾款催收').single.title,
+          contains('2 笔款项未到账'));
+    });
   });
 }

@@ -76,6 +76,20 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
           _buildPaymentsCard(),
           const SizedBox(height: 16),
         ],
+        // 收款与结项：款项全部到账且未归档 → 一键结项
+        if (contract.status != '已归档' &&
+            contract.payments.isNotEmpty &&
+            contract.payments.every((p) => p.received)) ...[
+          FilledButton.icon(
+            onPressed: _closeContract,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981),
+            ),
+            icon: const Icon(Icons.verified_outlined, size: 16),
+            label: const Text('确认结项并归档'),
+          ),
+          const SizedBox(height: 16),
+        ],
         // 合同信息
         _sectionTitle('合同信息'),
         const SizedBox(height: 8),
@@ -202,6 +216,24 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  /// 收款与结项：全部到账后归档结项（订单档案留存，支撑审计与复盘）
+  void _closeContract() {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final steps = contract.fulfillments
+        .map(
+          (f) => Fulfillment(
+            name: f.name,
+            status: 'done',
+            date: f.date.isEmpty ? today : f.date,
+          ),
+        )
+        .toList();
+    final updated = contract.copyWith(status: '已归档', fulfillments: steps);
+    setState(() => _contract = updated);
+    BusinessStore.instance.updateContract(updated);
+    showAppToast(context, '🎉 已结项归档：${contract.name}');
+  }
+
   // ===== 签署进度步骤条 =====
   Widget _buildProgressCard() {
     return Container(
@@ -212,18 +244,75 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
         border: Border.all(color: const Color(0xFFF1F5F9)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (var i = 0; i < contract.fulfillments.length; i++)
             _buildStep(
               contract.fulfillments[i],
               isLast: i == contract.fulfillments.length - 1,
+              onTap: () => _advanceStep(i),
             ),
+          const SizedBox(height: 4),
+          Text(
+            '点按步骤即可标记完成并记录日期（书面确认优先：完成后请补邮件留痕）',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStep(Fulfillment f, {required bool isLast}) {
+  /// 推进签署流程：把第 i 步及其之前全部标为完成，其后顺延激活；
+  /// 客户签署完成 → 合同转为已签署；归档完成 → 已归档
+  void _advanceStep(int index) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final steps = <Fulfillment>[];
+    for (var i = 0; i < contract.fulfillments.length; i++) {
+      final f = contract.fulfillments[i];
+      if (i <= index) {
+        steps.add(
+          Fulfillment(
+            name: f.name,
+            status: 'done',
+            date: f.date.isEmpty ? today : f.date,
+          ),
+        );
+      } else if (f.status == 'done') {
+        steps.add(f);
+      } else {
+        steps.add(Fulfillment(name: f.name, status: 'todo', date: ''));
+      }
+    }
+    var status = contract.status;
+    var signed = contract.signed;
+    if (index >= 1 && status == '待签署') {
+      status = '已签署';
+      signed = signed.isEmpty ? today : signed;
+    }
+    if (index == contract.fulfillments.length - 1) {
+      status = '已归档';
+      if (status != '已签署' && signed.isEmpty && index >= 1) signed = today;
+    }
+    final nextActive = index + 1 < steps.length
+        ? Fulfillment(
+            name: steps[index + 1].name,
+            status: 'active',
+            date: '',
+          )
+        : null;
+    if (nextActive != null) steps[index + 1] = nextActive;
+
+    final updated = contract.copyWith(
+      fulfillments: steps,
+      status: status,
+      signed: signed,
+    );
+    setState(() => _contract = updated);
+    BusinessStore.instance.updateContract(updated);
+    showAppToast(context, '✅ 「${steps[index].name}」已完成（$today）');
+  }
+
+  Widget _buildStep(Fulfillment f, {required bool isLast, VoidCallback? onTap}) {
     final (color, icon) = switch (f.status) {
       'done' => (const Color(0xFF10B981), Icons.check),
       'active' => (const Color(0xFF4F46E5), Icons.radio_button_checked),
@@ -233,24 +322,26 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 节点 + 连线
-          Column(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+          InkWell(
+            onTap: onTap,
+            child: Column(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, size: 13, color: color),
                 ),
-                child: Icon(icon, size: 13, color: color),
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(width: 2, color: const Color(0xFFE2E8F0)),
-                ),
-            ],
+                if (!isLast)
+                  Expanded(
+                    child: Container(width: 2, color: const Color(0xFFE2E8F0)),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(width: 12),
           // 步骤内容

@@ -4,6 +4,7 @@ import '../models/business.dart';
 import '../models/history.dart';
 import '../models/seed.dart';
 import '../models/store.dart';
+import '../services/follow_up.dart';
 import '../widgets/cards/contract_card.dart';
 import '../widgets/cards/quotation_card.dart';
 import '../widgets/common/responsive.dart';
@@ -117,6 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         _buildStatCards(data),
         const SizedBox(height: 16),
+        ..._buildFollowUps(data),
         _buildSectionHeader(
           '业务',
           count: data.businesses.length,
@@ -216,6 +218,129 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _buildHistoryCard(data.history.take(8).toList()),
       ],
     );
+  }
+
+  // ===== 需要跟进（时限机制：48h 跟进 / 7 天催收 / 结项提示） =====
+  List<Widget> _buildFollowUps(BusinessData data) {
+    final items = collectFollowUps(data);
+    if (items.isEmpty) return const [];
+    return [
+      Row(
+        children: [
+          const Text(
+            '需要跟进',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFEDD5),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '${items.length} 项',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFC2410C),
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFFED7AA)),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < items.length; i++)
+              InkWell(
+                onTap: () => _openFollowUp(items[i]),
+                borderRadius:
+                    i == items.length - 1 ? const BorderRadius.vertical(bottom: Radius.circular(12)) : null,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  decoration: BoxDecoration(
+                    border: i == items.length - 1
+                        ? null
+                        : Border(
+                            bottom: BorderSide(color: const Color(0xFFF1F5F9)),
+                          ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        switch (items[i].kind) {
+                          '报价跟进' => Icons.schedule_outlined,
+                          '签署跟进' => Icons.draw_outlined,
+                          '尾款催收' => Icons.currency_exchange_outlined,
+                          _ => Icons.task_alt_outlined,
+                        },
+                        size: 18,
+                        color: switch (items[i].kind) {
+                          '报价跟进' => const Color(0xFFF59E0B),
+                          '签署跟进' => const Color(0xFF4F46E5),
+                          '尾款催收' => const Color(0xFFEF4444),
+                          _ => const Color(0xFF10B981),
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${items[i].kind}｜${items[i].title}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1E293B),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              items[i].detail,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 16,
+                        color: Color(0xFFCBD5E1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+    ];
+  }
+
+  void _openFollowUp(FollowUpItem item) {
+    if (item.quotationId != null) {
+      final q = _data!.quotations.where((e) => e.id == item.quotationId).first;
+      _openDetail(QuotationDetailScreen(quotation: q));
+    } else if (item.contractId != null) {
+      final c = _data!.contracts.where((e) => e.id == item.contractId).first;
+      _openDetail(ContractDetailScreen(contract: c));
+    }
   }
 
   // ===== 最近动态（操作留痕） =====
