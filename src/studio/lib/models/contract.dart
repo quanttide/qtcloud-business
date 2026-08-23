@@ -1,3 +1,5 @@
+import 'log_entry.dart';
+
 /// 合同模型（合同管理 · 签约流程与履约跟踪）
 class Contract {
   const Contract({
@@ -12,6 +14,8 @@ class Contract {
     required this.signed,
     required this.fulfillments,
     this.payments = const [],
+    this.deliverables = const [],
+    this.logs = const [],
   });
 
   factory Contract.fromJson(Map<String, dynamic> json) {
@@ -31,6 +35,12 @@ class Contract {
       payments: (json['payments'] as List<dynamic>? ?? [])
           .map((e) => PaymentNode.fromJson(e as Map<String, dynamic>))
           .toList(),
+      deliverables: (json['deliverables'] as List<dynamic>? ?? [])
+          .map((e) => Fulfillment.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      logs: (json['logs'] as List<dynamic>? ?? [])
+          .map((e) => LogEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -46,6 +56,8 @@ class Contract {
     'signed': signed,
     'fulfillments': fulfillments.map((e) => e.toJson()).toList(),
     'payments': payments.map((e) => e.toJson()).toList(),
+    'deliverables': deliverables.map((e) => e.toJson()).toList(),
+    'logs': logs.map((e) => e.toJson()).toList(),
   };
 
   final String id;
@@ -64,6 +76,12 @@ class Contract {
   /// 付款节点（到账进度：到一笔勾一笔）
   final List<PaymentNode> payments;
 
+  /// 交付与验收清单（执行与验收：逐项勾选记日期）
+  final List<Fulfillment> deliverables;
+
+  /// 往来留痕（追加式：邮件确认/电话/会议/变更协议）
+  final List<LogEntry> logs;
+
   /// 已到账金额（万元）
   double get receivedAmount => payments
       .where((p) => p.received)
@@ -81,6 +99,8 @@ class Contract {
     String? signed,
     List<Fulfillment>? fulfillments,
     List<PaymentNode>? payments,
+    List<Fulfillment>? deliverables,
+    List<LogEntry>? logs,
   }) {
     return Contract(
       id: id ?? this.id,
@@ -94,6 +114,8 @@ class Contract {
       signed: signed ?? this.signed,
       fulfillments: fulfillments ?? this.fulfillments,
       payments: payments ?? this.payments,
+      deliverables: deliverables ?? this.deliverables,
+      logs: logs ?? this.logs,
     );
   }
 }

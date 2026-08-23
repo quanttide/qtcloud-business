@@ -8,15 +8,22 @@ import '../widgets/common/responsive.dart';
 import '../widgets/common/toast.dart';
 
 /// 登记合同（US3）：选择合同模板 → 填客户与金额 → 确认付款节点 → 存入业务名下
-/// 传入 business 时即"在业务下登记合同"，付款节点按业务模板预填
+/// 传入 business 时即"在业务下登记合同"，付款节点按业务模板预填；
+/// 传入 initialClient/initialAmount 时为"报价转合同"（金额自动带入）
 class ContractEditScreen extends StatefulWidget {
   final List<BusinessTemplate> contractTemplates;
   final Business? business;
+  final String? initialName;
+  final String? initialClient;
+  final double? initialAmount;
 
   const ContractEditScreen({
     super.key,
     required this.contractTemplates,
     this.business,
+    this.initialName,
+    this.initialClient,
+    this.initialAmount,
   });
 
   @override
@@ -47,6 +54,12 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
   @override
   void initState() {
     super.initState();
+    _nameCtrl.text = widget.initialName ?? '';
+    _clientCtrl.text = widget.initialClient ?? '';
+    if (widget.initialAmount != null && widget.initialAmount! > 0) {
+      _amountCtrl.text = widget.initialAmount!.toStringAsFixed(1);
+    }
+    if (widget.business != null) _businessId = widget.business!.id;
     if (widget.contractTemplates.isNotEmpty) {
       _template = widget.contractTemplates.first;
     }
@@ -429,31 +442,34 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
             _template = widget.contractTemplates.firstWhere((e) => e.id == id);
           });
         },
-        child: Column(
-          children: widget.contractTemplates
-              .map(
-                (t) => RadioListTile<String>(
-                  value: t.id,
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    t.name,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E293B),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            children: widget.contractTemplates
+                .map(
+                  (t) => RadioListTile<String>(
+                    value: t.id,
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      t.name,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    subtitle: Text(
+                      t.description,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF94A3B8),
+                      ),
                     ),
                   ),
-                  subtitle: Text(
-                    t.description,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
+                )
+                .toList(),
+          ),
         ),
       ),
     );

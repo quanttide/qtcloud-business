@@ -1,3 +1,5 @@
+import 'log_entry.dart';
+
 /// 报价单模型（报价制定 · 报价单生成）
 class Quotation {
   const Quotation({
@@ -14,6 +16,7 @@ class Quotation {
     required this.products,
     required this.totalAmount,
     required this.versions,
+    this.logs = const [],
   });
 
   factory Quotation.fromJson(Map<String, dynamic> json) {
@@ -36,6 +39,9 @@ class Quotation {
           .toList(),
       totalAmount: (json['totalAmount'] as num).toDouble(),
       versions: versions,
+      logs: (json['logs'] as List<dynamic>? ?? [])
+          .map((e) => LogEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -57,6 +63,9 @@ class Quotation {
   /// 报价历史版本（降序：最新在前）
   final List<QuotationVersion> versions;
 
+  /// 往来留痕（追加式：邮件确认/电话/会议/变更协议）
+  final List<LogEntry> logs;
+
   /// 当前版本是否为最新
   bool get isLatest => versions.isEmpty || versions.first.version == version;
 
@@ -74,7 +83,42 @@ class Quotation {
     'products': products.map((e) => e.toJson()).toList(),
     'totalAmount': totalAmount,
     'versions': versions.map((e) => e.toJson()).toList(),
+    'logs': logs.map((e) => e.toJson()).toList(),
   };
+
+  Quotation copyWith({
+    String? id,
+    String? businessId,
+    String? name,
+    String? client,
+    String? template,
+    String? status,
+    int? version,
+    String? created,
+    String? updated,
+    String? pricingNote,
+    List<QuotationProduct>? products,
+    double? totalAmount,
+    List<QuotationVersion>? versions,
+    List<LogEntry>? logs,
+  }) {
+    return Quotation(
+      id: id ?? this.id,
+      businessId: businessId ?? this.businessId,
+      name: name ?? this.name,
+      client: client ?? this.client,
+      template: template ?? this.template,
+      status: status ?? this.status,
+      version: version ?? this.version,
+      created: created ?? this.created,
+      updated: updated ?? this.updated,
+      pricingNote: pricingNote ?? this.pricingNote,
+      products: products ?? this.products,
+      totalAmount: totalAmount ?? this.totalAmount,
+      versions: versions ?? this.versions,
+      logs: logs ?? this.logs,
+    );
+  }
 }
 
 /// 报价单产品明细（产品、单价、数量、折扣）

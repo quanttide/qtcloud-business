@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_client.dart';
@@ -28,6 +29,10 @@ class BusinessStore {
   BusinessData get data =>
       _data ??
       BusinessData(businesses: [], quotations: [], contracts: [], templates: []);
+
+  /// 仅供测试注入数据
+  @visibleForTesting
+  void seedForTest(BusinessData d) => _data = d;
 
   Future<BusinessData> load() async {
     if (_data != null) return _data!;
@@ -123,6 +128,19 @@ class BusinessStore {
       contract.id,
       contract.toJson(),
       create: true,
+    );
+    if (!ok) hasUnsyncedChanges = true;
+    await _cacheLocal();
+  }
+
+  /// 更新报价（留痕登记、状态变更等）
+  Future<void> updateQuotation(Quotation quotation) async {
+    final i = data.quotations.indexWhere((q) => q.id == quotation.id);
+    if (i != -1) data.quotations[i] = quotation;
+    final ok = await ApiClient.instance.saveEntity(
+      'quotations',
+      quotation.id,
+      quotation.toJson(),
     );
     if (!ok) hasUnsyncedChanges = true;
     await _cacheLocal();

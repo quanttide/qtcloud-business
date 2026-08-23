@@ -6,10 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:qtcloud_business_studio/models/business.dart';
 import 'package:qtcloud_business_studio/models/contract.dart';
+import 'package:qtcloud_business_studio/models/log_entry.dart';
 import 'package:qtcloud_business_studio/models/quotation.dart';
 import 'package:qtcloud_business_studio/models/seed.dart';
 import 'package:qtcloud_business_studio/models/store.dart';
 import 'package:qtcloud_business_studio/screens/contract_detail_screen.dart';
+import 'package:qtcloud_business_studio/screens/contract_edit_screen.dart';
 import 'package:qtcloud_business_studio/screens/dashboard_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_detail_screen.dart';
 import 'package:qtcloud_business_studio/screens/quotation_edit_screen.dart';
@@ -384,6 +386,112 @@ void main() {
       expect(items.map((e) => e.kind), containsAll(['签署跟进', '尾款催收', '可结项']));
       expect(items.where((e) => e.kind == '尾款催收').single.title,
           contains('2 笔款项未到账'));
+    });
+  });
+
+  group('往来留痕与转合同（需求四补全）', () {
+    test('logs/deliverables 字段 JSON 往返不丢数据', () {
+      const contract = Contract(
+        id: 'c-rt',
+        businessId: 'b',
+        name: 'n',
+        client: 'c',
+        template: '',
+        status: '已签署',
+        amount: 10,
+        created: '2026-08-01',
+        signed: '2026-08-02',
+        fulfillments: [],
+        payments: [],
+        deliverables: [
+          Fulfillment(name: '审计报告', status: 'done', date: '2026-08-05'),
+          Fulfillment(name: '培训材料', status: 'todo', date: ''),
+        ],
+        logs: [
+          LogEntry(date: '2026-08-03', type: '邮件确认', note: '报价确认'),
+          LogEntry(date: '2026-08-04', type: '变更协议', note: '范围+1'),
+        ],
+      );
+      final back = Contract.fromJson(
+        jsonDecode(jsonEncode(contract.toJson())) as Map<String, dynamic>,
+      );
+      expect(back.deliverables.length, 2);
+      expect(back.deliverables.first.name, '审计报告');
+      expect(back.logs.last.type, '变更协议');
+      expect(back.logs.first.note, '报价确认');
+
+      const q = Quotation(
+        id: 'q-rt',
+        businessId: 'b',
+        name: 'n',
+        client: 'c',
+        template: '',
+        status: '草稿',
+        version: 1,
+        created: '2026-08-01',
+        updated: '2026-08-01',
+        pricingNote: '',
+        products: [],
+        totalAmount: 3,
+        versions: [],
+        logs: [LogEntry(date: '2026-08-02', type: '电话沟通', note: '初次沟通')],
+      );
+      final qb = Quotation.fromJson(
+        jsonDecode(jsonEncode(q.toJson())) as Map<String, dynamic>,
+      );
+      expect(qb.logs.single.type, '电话沟通');
+    });
+
+    testWidgets('报价一键转合同：预填客户与金额', (tester) async {
+      final data = loadTestSeed();
+      BusinessStore.instance.seedForTest(data);
+      final quotation = data.quotations.first;
+      await tester.pumpWidget(
+        MaterialApp(home: QuotationDetailScreen(quotation: quotation)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('转为合同（预填客户与金额）'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ContractEditScreen), findsOneWidget);
+      // 客户与金额已预填
+      expect(find.text(quotation.client), findsWidgets);
+      expect(
+        find.text(quotation.totalAmount.toStringAsFixed(1)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('报价详情登记留痕（书面确认优先）', (tester) async {
+      final data = loadTestSeed();
+      BusinessStore.instance.seedForTest(data);
+      final quotation = data.quotations.first;
+      await tester.pumpWidget(
+        MaterialApp(home: QuotationDetailScreen(quotation: quotation)),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find
+          .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+          .first;
+      await tester.scrollUntilVisible(
+        find.text('登记留痕'),
+        200,
+        scrollable: scrollable,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('登记留痕'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '报价 v2 已邮件确认');
+      await tester.tap(find.text('保存留痕'));
+      await tester.pump();
+      await tester.pump();
+
+      // 留痕卡与退场中的弹窗可能同时短暂可见
+      expect(find.textContaining('报价 v2 已邮件确认'), findsWidgets);
+      expect(find.textContaining('✅ 已登记留痕'), findsOneWidget);
     });
   });
 }

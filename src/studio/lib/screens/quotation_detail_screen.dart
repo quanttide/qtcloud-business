@@ -1,19 +1,73 @@
 import 'package:flutter/material.dart';
 
+import '../models/business.dart';
+import '../models/log_entry.dart';
 import '../models/quotation.dart';
 import '../models/store.dart';
+import '../widgets/cards/logs_card.dart';
 import '../widgets/common/responsive.dart';
 import '../widgets/common/sidebar.dart';
 import '../widgets/common/status_badge.dart';
 import '../widgets/common/toast.dart';
 import '../widgets/dialogs/confirm_delete_dialog.dart';
 import '../widgets/dialogs/export_dialog.dart';
+import 'contract_edit_screen.dart';
 
-/// 报价详情：产品明细、定价说明、版本历史（US2）、导出（US1）
-class QuotationDetailScreen extends StatelessWidget {
+/// 报价详情：产品明细、定价说明、版本历史（US2）、导出（US1）、转合同与留痕（US4）
+class QuotationDetailScreen extends StatefulWidget {
   final Quotation quotation;
 
   const QuotationDetailScreen({super.key, required this.quotation});
+
+  @override
+  State<QuotationDetailScreen> createState() => _QuotationDetailScreenState();
+}
+
+class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
+  late Quotation quotation;
+
+  @override
+  void initState() {
+    super.initState();
+    quotation = widget.quotation;
+  }
+
+  void _addLog(LogEntry entry) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final updated = quotation.copyWith(
+      logs: [...quotation.logs, entry],
+      updated: today,
+    );
+    setState(() => quotation = updated);
+    BusinessStore.instance.updateQuotation(updated);
+    showAppToast(context, '✅ 已登记留痕：${entry.type}');
+  }
+
+  /// 成交后一键转合同：预填客户与金额（金额=报价总额），挂同一业务
+  void _toContract() {
+    Business? business;
+    for (final b in BusinessStore.instance.data.businesses) {
+      if (b.id == quotation.businessId) {
+        business = b;
+        break;
+      }
+    }
+    if (business == null) {
+      showAppToast(context, '该报价未挂业务，请先补挂业务');
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ContractEditScreen(
+          contractTemplates: BusinessStore.instance.data.contractTemplates,
+          business: business,
+          initialName: '${quotation.client} · 合同',
+          initialClient: quotation.client,
+          initialAmount: quotation.totalAmount,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +121,11 @@ class QuotationDetailScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _buildVersionsCard(),
+        const SizedBox(height: 16),
+        // 往来留痕（书面确认优先 · 变更协议留痕）
+        _sectionTitle('往来留痕'),
+        const SizedBox(height: 8),
+        LogsCard(logs: quotation.logs, onAdd: _addLog),
       ],
     );
   }
@@ -155,6 +214,28 @@ class QuotationDetailScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // 报价转合同：预填客户与金额（成交动作）
+        Tooltip(
+          message: '转为合同（预填客户与金额）',
+          child: InkWell(
+            onTap: _toContract,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: const Icon(
+                Icons.handshake_outlined,
+                size: 16,
+                color: Color(0xFF059669),
+              ),
+            ),
           ),
         ),
         const SizedBox(width: 8),
