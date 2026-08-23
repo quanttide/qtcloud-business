@@ -626,4 +626,127 @@ void main() {
       expect(bytes.lengthInBytes, greaterThan(1000));
     });
   });
+
+  group('规则校准与章程检查项（需求五收尾+需求七）', () {
+    Business business({List<String> checklist = const []}) => Business(
+          id: 'biz-c',
+          name: '校准业务',
+          description: '',
+          status: '在营',
+          pricingRule: PricingRule(
+            unitPrice: 0.1,
+            stageDefaults: [
+              StageDefault(name: '采集', workload: 10),
+              StageDefault(name: '建模', workload: 20),
+              StageDefault(name: '报告', workload: 20),
+            ], // 基线合计 50 人天 × 0.1 万 = 成本估算 5 万
+            minGrossMargin: 0.3,
+            paymentTerms: '签约 50%，交付 50%',
+          ),
+          created: '2026-01-01',
+          updated: '2026-01-01',
+          checklistTemplate: checklist,
+        );
+
+    BusinessStats stats({
+      double overdue = 0,
+      double? cycle,
+      int quotations = 3,
+      int contracts = 2,
+      double amount = 30,
+    }) =>
+        BusinessStats(
+          quotationCount: quotations,
+          contractCount: contracts,
+          contractAmount: amount,
+          receivedAmount: amount * 0.5,
+          avgCollectionDays: cycle,
+          overdueReceivable: overdue,
+          staleQuotationCount: 0,
+        );
+
+    test('超期应收与客单价低于成本 → danger 建议', () {
+      // 客单价 3 万 < 成本估算 5 万 + 有超期应收
+      final advices = buildCalibrationAdvice(
+        stats(overdue: 4, amount: 6),
+        business(),
+      );
+      expect(advices.map((a) => a.level), everyElement('danger'));
+      expect(
+        advices.any((a) => a.message.contains('超期应收')),
+        isTrue,
+      );
+      expect(
+        advices.any((a) => a.message.contains('低于成本法估算')),
+        isTrue,
+      );
+    });
+
+    test('回款周期偏长/转化率低 → warn；数据健康 → ok', () {
+      final warnCycle = buildCalibrationAdvice(
+        stats(cycle: 60),
+        business(),
+      );
+      expect(warnCycle.any((a) => a.level == 'warn' && a.message.contains('回款周期')), isTrue);
+
+      final lowConv = buildCalibrationAdvice(
+        stats(contracts: 1, quotations: 5, cycle: 20),
+        business(),
+      );
+      expect(lowConv.any((a) => a.level == 'warn' && a.message.contains('转化率')), isTrue);
+
+      final ok = buildCalibrationAdvice(stats(), business());
+      expect(ok.single.level, 'ok');
+    });
+
+    test('业务未自定义时检查项模板回退章程默认，JSON 往返保留自定义', () {
+      expect(business().effectiveChecklist().length, 5);
+      expect(
+        business()
+            .effectiveChecklist()
+            .any((t) => t.contains('报价确认')),
+        isTrue,
+      );
+
+      final custom = Business.fromJson(
+        jsonDecode(
+          jsonEncode(business(checklist: ['A', 'B']).toJson()),
+        ) as Map<String, dynamic>,
+      );
+      expect(custom.checklistTemplate, ['A', 'B']);
+      expect(custom.effectiveChecklist(), ['A', 'B']);
+    });
+
+    testWidgets('登记合同自动生成章程检查项到订单', (tester) async {
+      final data = loadTestSeed();
+      BusinessStore.instance.seedForTest(data);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ContractEditScreen(
+            contractTemplates: data.contractTemplates,
+            business: data.businesses.first,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 填客户与金额（前三个 TextField：名称/客户/金额）
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(1), '检查项客户');
+      await tester.enterText(fields.at(2), '12');
+
+      await tester.scrollUntilVisible(
+        find.text('保存合同'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('保存合同'));
+      await tester.pump();
+
+      final saved = BusinessStore.instance.data.contracts.first;
+      expect(saved.client, '检查项客户');
+      expect(saved.checklist.length, 5);
+      expect(saved.checklist.every((c) => c.status == 'todo'), isTrue);
+    });
+  });
 }

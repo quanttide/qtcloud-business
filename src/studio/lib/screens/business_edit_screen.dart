@@ -28,6 +28,7 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
   late final List<_StageRow> _stages;
   late List<FactorLevel> _difficulties;
   late List<FactorLevel> _scales;
+  late List<_ChecklistRow> _checklist;
 
   @override
   void initState() {
@@ -39,6 +40,7 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
     ];
     _difficulties = PricingRule.defaultDifficultyLevels.toList();
     _scales = PricingRule.defaultScaleLevels.toList();
+    _checklist = defaultChecklistTemplate.map(_ChecklistRow.new).toList();
   }
 
   @override
@@ -52,6 +54,9 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
     for (final s in _stages) {
       s.dispose();
     }
+    for (final c in _checklist) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -61,6 +66,14 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
       sum += s.workload * (double.tryParse(_unitPriceCtrl.text.trim()) ?? 0);
     }
     return sum;
+  }
+
+  bool _sameAsDefault(List<String> checklist) {
+    if (checklist.length != defaultChecklistTemplate.length) return false;
+    for (var i = 0; i < checklist.length; i++) {
+      if (checklist[i] != defaultChecklistTemplate[i]) return false;
+    }
+    return true;
   }
 
   void _save() {
@@ -80,6 +93,10 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
           ),
         )
         .toList();
+    final checklist = _checklist
+        .map((c) => c.ctrl.text.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
     final business = Business(
       id: BusinessStore.instance.nextBusinessId(),
       name: name,
@@ -95,6 +112,8 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
       ),
       commercialModel: _commercialModel,
       changeRuleTemplate: _changeRuleCtrl.text.trim(),
+      checklistTemplate:
+          _sameAsDefault(checklist) ? const [] : checklist,
       created: DateTime.now().toIso8601String().substring(0, 10),
       updated: DateTime.now().toIso8601String().substring(0, 10),
     );
@@ -287,6 +306,34 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
             decoration: _inputDecoration('范围/工期/费用变更如何评估与确认'),
           ),
         ]),
+        const SizedBox(height: 16),
+        _sectionTitle('章程检查项模板（登记合同时自动生成到订单）'),
+        const SizedBox(height: 8),
+        _card([
+          for (var i = 0; i < _checklist.length; i++) _buildChecklistRow(i),
+          Row(
+            children: [
+              TextButton.icon(
+                onPressed: () =>
+                    setState(() => _checklist.add(_ChecklistRow.empty())),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('添加检查项'),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => setState(() {
+                  for (final c in _checklist) {
+                    c.dispose();
+                  }
+                  _checklist =
+                      defaultChecklistTemplate.map(_ChecklistRow.new).toList();
+                }),
+                icon: const Icon(Icons.restore, size: 16),
+                label: const Text('恢复章程默认'),
+              ),
+            ],
+          ),
+        ]),
         const SizedBox(height: 20),
         FilledButton.icon(
           onPressed: _save,
@@ -406,6 +453,44 @@ class _BusinessEditScreenState extends State<BusinessEditScreen> {
     );
   }
 
+  Widget _buildChecklistRow(int index) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.checklist_rtl,
+            size: 16,
+            color: Color(0xFF4F46E5),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _checklist[index].ctrl,
+              decoration: _inputDecoration('检查项（如：报价确认（邮件））'),
+            ),
+          ),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: () {
+              _checklist[index].dispose();
+              setState(() => _checklist.removeAt(index));
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(
+                Icons.delete_outline,
+                size: 16,
+                color: Color(0xFF94A3B8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _sectionTitle(String title) {
     return Text(
       title,
@@ -464,4 +549,15 @@ class _StageRow {
     nameCtrl.dispose();
     workloadCtrl.dispose();
   }
+}
+
+/// 章程检查项编辑行状态
+class _ChecklistRow {
+  _ChecklistRow(String text) : ctrl = TextEditingController(text: text);
+
+  _ChecklistRow.empty() : ctrl = TextEditingController();
+
+  final TextEditingController ctrl;
+
+  void dispose() => ctrl.dispose();
 }

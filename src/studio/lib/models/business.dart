@@ -1,5 +1,14 @@
 import 'quotation.dart';
 
+/// 《量潮数据审计章程》底线检查项：所有订单统一执行，业务可覆盖扩展
+const defaultChecklistTemplate = [
+  '策划书确认（书面）',
+  '报价确认（邮件）',
+  '进度汇报',
+  '交付确认（邮件）',
+  '尾款催收与结清',
+];
+
 /// 业务模型：商务活动的组织中心，订单是业务的实例
 /// 报价规则、商业模型、毛利底线与付款节点模板定义在业务上
 class Business {
@@ -13,6 +22,7 @@ class Business {
     required this.updated,
     this.commercialModel = '',
     this.changeRuleTemplate = '',
+    this.checklistTemplate = const [],
   });
 
   factory Business.fromJson(Map<String, dynamic> json) {
@@ -28,6 +38,9 @@ class Business {
       updated: json['updated'] as String? ?? '',
       commercialModel: json['commercialModel'] as String? ?? '',
       changeRuleTemplate: json['changeRuleTemplate'] as String? ?? '',
+      checklistTemplate: (json['checklistTemplate'] as List<dynamic>? ?? [])
+          .map((e) => e as String)
+          .toList(),
     );
   }
 
@@ -47,6 +60,9 @@ class Business {
   /// 变更规则模板：范围/工期/费用影响的书面评估与确认约定
   final String changeRuleTemplate;
 
+  /// 章程检查项模板：登记合同时实例化为订单检查清单；空则用章程默认项
+  final List<String> checklistTemplate;
+
   final String created;
   final String updated;
 
@@ -58,9 +74,14 @@ class Business {
     'pricingRule': pricingRule.toJson(),
     if (commercialModel.isNotEmpty) 'commercialModel': commercialModel,
     if (changeRuleTemplate.isNotEmpty) 'changeRuleTemplate': changeRuleTemplate,
+    if (checklistTemplate.isNotEmpty) 'checklistTemplate': checklistTemplate,
     'created': created,
     'updated': updated,
   };
+
+  /// 生效的检查项模板：业务自定义优先，否则回退章程默认
+  List<String> effectiveChecklist() =>
+      checklistTemplate.isEmpty ? defaultChecklistTemplate : checklistTemplate;
 
   /// 规则没写清的项：写清报价公式与毛利底线才算业务明确，
   /// 有缺口时不允许进入订单执行（发起报价被拦截）

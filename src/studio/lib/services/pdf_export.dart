@@ -470,6 +470,31 @@ Future<Uint8List> buildContractArchivePdf(
           pw.SizedBox(height: 16),
         ],
 
+        // 流程检查项（章程底线）
+        if (contract.checklist.isNotEmpty) ...[
+          pw.Text('流程检查项', style: ts(size: 11, bold: true)),
+          pw.SizedBox(height: 4),
+          pw.TableHelper.fromTextArray(
+            border: pw.TableBorder.all(color: line, width: 0.5),
+            headerDecoration: const pw.BoxDecoration(color: light),
+            headerStyle: ts(bold: true),
+            cellStyle: ts(),
+            cellAlignment: pw.Alignment.centerLeft,
+            cellPadding:
+                const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            headers: ['检查项', '状态', '完成日期'],
+            data: [
+              for (final c in contract.checklist)
+                [
+                  c.name,
+                  fulfillmentLabel(c.status),
+                  c.date.isEmpty ? '—' : c.date,
+                ],
+            ],
+          ),
+          pw.SizedBox(height: 16),
+        ],
+
         // 交付与验收
         if (contract.deliverables.isNotEmpty) ...[
           pw.Text('交付与验收', style: ts(size: 11, bold: true)),

@@ -44,7 +44,28 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
 
   /// 交付与验收：勾选记日期，取消勾清空
   void _toggleDeliverable(int index) {
-    final items = List<Fulfillment>.from(contract.deliverables);
+    _toggleTaskItem(
+      current: contract.deliverables,
+      index: index,
+      onUpdate: (items) => contract.copyWith(deliverables: items),
+    );
+  }
+
+  /// 流程检查项勾选（章程底线）
+  void _toggleChecklistItem(int index) {
+    _toggleTaskItem(
+      current: contract.checklist,
+      index: index,
+      onUpdate: (items) => contract.copyWith(checklist: items),
+    );
+  }
+
+  void _toggleTaskItem({
+    required List<Fulfillment> current,
+    required int index,
+    required Contract Function(List<Fulfillment>) onUpdate,
+  }) {
+    final items = List<Fulfillment>.from(current);
     final item = items[index];
     final done = item.status != 'done';
     items[index] = Fulfillment(
@@ -52,7 +73,7 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
       status: done ? 'done' : 'todo',
       date: done ? DateTime.now().toIso8601String().substring(0, 10) : '',
     );
-    final updated = contract.copyWith(deliverables: items);
+    final updated = onUpdate(items);
     setState(() => _contract = updated);
     BusinessStore.instance.updateContract(updated);
   }
@@ -176,10 +197,25 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
         const SizedBox(height: 8),
         _buildProgressCard(),
         const SizedBox(height: 16),
+        // 流程检查项（需求七：章程底线统一执行）
+        _sectionTitle('流程检查项'),
+        const SizedBox(height: 8),
+        _buildTaskCard(
+          items: contract.checklist,
+          emptyHint: '该合同未生成检查项（旧数据）',
+          onToggle: _toggleChecklistItem,
+        ),
+        const SizedBox(height: 16),
         // 执行与验收：交付物清单逐项勾选记日期
         _sectionTitle('交付与验收'),
         const SizedBox(height: 8),
-        _buildDeliverablesCard(),
+        _buildTaskCard(
+          items: contract.deliverables,
+          emptyHint: '暂无交付物——建议把报告、培训等交付逐项列出，完成后勾选',
+          onToggle: _toggleDeliverable,
+          addLabel: '添加交付物',
+          onAdd: _addDeliverable,
+        ),
         const SizedBox(height: 16),
         // 付款到账
         if (contract.payments.isNotEmpty) ...[
@@ -549,9 +585,14 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
   }
 
   // ===== 付款到账 =====
-  /// 交付与验收清单：点按勾选记日期，可添加条目
-  Widget _buildDeliverablesCard() {
-    final items = contract.deliverables;
+  /// 通用任务清单卡（流程检查项 / 交付与验收共用）
+  Widget _buildTaskCard({
+    required List<Fulfillment> items,
+    required String emptyHint,
+    required void Function(int) onToggle,
+    String? addLabel,
+    Future<void> Function()? onAdd,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -563,13 +604,13 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (items.isEmpty)
-            const Text(
-              '暂无交付物——建议把报告、培训等交付逐项列出，完成后勾选',
-              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+            Text(
+              emptyHint,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
             ),
           for (var i = 0; i < items.length; i++)
             InkWell(
-              onTap: () => _toggleDeliverable(i),
+              onTap: () => onToggle(i),
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -611,7 +652,7 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
                       ),
                     ),
                     Text(
-                      items[i].date.isEmpty ? '待交付' : '${items[i].date} 验收',
+                      items[i].date.isEmpty ? '待办' : '${items[i].date} 完成',
                       style: TextStyle(
                         fontSize: 11,
                         color: items[i].status == 'done'
@@ -623,16 +664,18 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
                 ),
               ),
             ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: _addDeliverable,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF4F46E5),
-              side: const BorderSide(color: Color(0xFFC7D2FE)),
+          if (addLabel != null && onAdd != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: onAdd,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF4F46E5),
+                side: const BorderSide(color: Color(0xFFC7D2FE)),
+              ),
+              icon: const Icon(Icons.add, size: 14),
+              label: Text(addLabel),
             ),
-            icon: const Icon(Icons.add, size: 14),
-            label: const Text('添加交付物'),
-          ),
+          ],
         ],
       ),
     );

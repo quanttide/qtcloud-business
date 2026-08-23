@@ -145,6 +145,11 @@ class _ContractEditScreenState extends State<ContractEditScreen> {
               Fulfillment(name: '客户签署', status: 'todo', date: ''),
               Fulfillment(name: '合同归档', status: 'todo', date: ''),
             ],
+            // 章程检查项：按业务模板（或默认章程底线）实例化到订单（需求七）
+            checklist: business
+                .effectiveChecklist()
+                .map((name) => Fulfillment(name: name, status: 'todo', date: ''))
+                .toList(),
             payments: _payments
                 .map(
                   (p) => PaymentNode(

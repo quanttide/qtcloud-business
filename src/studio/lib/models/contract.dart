@@ -1,4 +1,4 @@
-import 'log_entry.dart';
+﻿import 'log_entry.dart';
 
 /// 合同模型（合同管理 · 签约流程与履约跟踪）
 class Contract {
@@ -15,6 +15,7 @@ class Contract {
     required this.fulfillments,
     this.payments = const [],
     this.deliverables = const [],
+    this.checklist = const [],
     this.logs = const [],
   });
 
@@ -38,6 +39,9 @@ class Contract {
       deliverables: (json['deliverables'] as List<dynamic>? ?? [])
           .map((e) => Fulfillment.fromJson(e as Map<String, dynamic>))
           .toList(),
+      checklist: (json['checklist'] as List<dynamic>? ?? [])
+          .map((e) => Fulfillment.fromJson(e as Map<String, dynamic>))
+          .toList(),
       logs: (json['logs'] as List<dynamic>? ?? [])
           .map((e) => LogEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -57,6 +61,7 @@ class Contract {
     'fulfillments': fulfillments.map((e) => e.toJson()).toList(),
     'payments': payments.map((e) => e.toJson()).toList(),
     'deliverables': deliverables.map((e) => e.toJson()).toList(),
+    'checklist': checklist.map((e) => e.toJson()).toList(),
     'logs': logs.map((e) => e.toJson()).toList(),
   };
 
@@ -79,6 +84,9 @@ class Contract {
   /// 交付与验收清单（执行与验收：逐项勾选记日期）
   final List<Fulfillment> deliverables;
 
+  /// 流程检查项（章程底线：登记合同时按业务模板实例化）
+  final List<Fulfillment> checklist;
+
   /// 往来留痕（追加式：邮件确认/电话/会议/变更协议）
   final List<LogEntry> logs;
 
@@ -100,6 +108,7 @@ class Contract {
     List<Fulfillment>? fulfillments,
     List<PaymentNode>? payments,
     List<Fulfillment>? deliverables,
+    List<Fulfillment>? checklist,
     List<LogEntry>? logs,
   }) {
     return Contract(
@@ -115,6 +124,7 @@ class Contract {
       fulfillments: fulfillments ?? this.fulfillments,
       payments: payments ?? this.payments,
       deliverables: deliverables ?? this.deliverables,
+      checklist: checklist ?? this.checklist,
       logs: logs ?? this.logs,
     );
   }

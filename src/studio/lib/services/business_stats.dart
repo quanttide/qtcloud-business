@@ -1,3 +1,4 @@
+import '../models/business.dart';
 import '../models/seed.dart';
 
 DateTime? _parseDate(String s) {
@@ -45,6 +46,75 @@ class BusinessStats {
   /// 回款进度（0~1）
   double get receivedRatio =>
       contractAmount <= 0 ? 0 : (receivedAmount / contractAmount).clamp(0, 1);
+}
+
+/// 规则校准建议（需求五：用实际数据反推业务规则偏差）
+class CalibrationAdvice {
+  const CalibrationAdvice(this.level, this.message);
+
+  /// ok / warn / danger
+  final String level;
+  final String message;
+}
+
+/// 对比经营统计与业务定义的规则，给出校准建议
+List<CalibrationAdvice> buildCalibrationAdvice(
+  BusinessStats stats,
+  Business business,
+) {
+  final advices = <CalibrationAdvice>[];
+
+  if (stats.overdueReceivable > 0) {
+    advices.add(
+      CalibrationAdvice(
+        'danger',
+        '有 ${stats.overdueReceivable.toStringAsFixed(1)} 万超期应收：优先催收，'
+        '并考虑提高签约款比例。',
+      ),
+    );
+  }
+
+  final cycle = stats.avgCollectionDays;
+  if (cycle != null && cycle > 45) {
+    advices.add(
+      CalibrationAdvice(
+        'warn',
+        '平均回款周期 ${cycle.toStringAsFixed(0)} 天偏长：'
+        '校准付款节点模板，缩短尾款账期。',
+      ),
+    );
+  }
+
+  if (stats.quotationCount >= 3 && stats.conversionRate < 0.3) {
+    advices.add(
+      CalibrationAdvice(
+        'warn',
+        '报价转化率 ${(stats.conversionRate * 100).toStringAsFixed(0)}% 偏低：'
+        '复盘定价水平与客户筛选标准。',
+      ),
+    );
+  }
+
+  if (stats.contractCount > 0) {
+    final avgContract = stats.contractAmount / stats.contractCount;
+    final cost = business.pricingRule.costEstimate;
+    if (cost > 0 && avgContract < cost) {
+      advices.add(
+        CalibrationAdvice(
+          'danger',
+          '平均客单价 ${avgContract.toStringAsFixed(1)} 万低于成本法估算 '
+          '${cost.toStringAsFixed(1)} 万：报价需上调或收敛范围。',
+        ),
+      );
+    }
+  }
+
+  if (advices.isEmpty) {
+    advices.add(
+      const CalibrationAdvice('ok', '经营健康：实际数据与规则匹配，暂无需调整。'),
+    );
+  }
+  return advices;
 }
 
 /// 汇总某业务名下全部订单的经营指标
