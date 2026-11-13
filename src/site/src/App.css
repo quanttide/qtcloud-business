@@ -1,0 +1,178 @@
+.app {
+  min-height: 100vh;
+}
+
+.site-nav {
+  background: #1e1b4b;
+  color: #fff;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+}
+
+.nav-inner {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-brand {
+  font-weight: 800;
+  font-size: 18px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.site-links {
+  display: flex;
+  gap: 24px;
+}
+
+.site-links a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.site-links a:hover {
+  color: #fff;
+}
+
+.hero {
+  background: linear-gradient(135deg, #1e1b4b 0%, #4f46e5 100%);
+  color: #fff;
+  padding: 80px 32px;
+  text-align: center;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 48px;
+  font-weight: 800;
+}
+
+.hero p {
+  margin: 16px 0 0;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.content {
+  padding: 40px 32px;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+/* 首页 markdown 正文 */
+.content article {
+  line-height: 1.8;
+  color: #1f2937;
+}
+
+.content article h1 {
+  font-size: 24px;
+  margin: 32px 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.14);
+}
+
+.content article h2 {
+  font-size: 20px;
+  margin: 28px 0 12px;
+  color: #4f46e5;
+}
+
+.content article h3 {
+  font-size: 17px;
+  margin: 24px 0 10px;
+}
+
+.content article p {
+  margin: 0 0 16px;
+}
+
+.content article ul,
+.content article ol {
+  margin: 0 0 16px;
+  padding-left: 24px;
+}
+
+.content article li {
+  margin-bottom: 6px;
+}
+
+.content article blockquote {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-left: 4px solid #4f46e5;
+  background: rgba(79, 70, 229, 0.06);
+  color: #4338ca;
+}
+
+.content article code {
+  padding: 2px 6px;
+  background: rgba(31, 41, 55, 0.08);
+  border-radius: 4px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.9em;
+}
+
+.content article pre {
+  margin: 16px 0;
+  padding: 16px;
+  background: #1e1b4b;
+  color: #e0e7ff;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.content article pre code {
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+
+.content article hr {
+  margin: 24px 0;
+  border: none;
+  border-top: 1px solid rgba(31, 41, 55, 0.14);
+}
+
+.content article table {
+  width: 100%;
+  margin: 16px 0;
+  border-collapse: collapse;
+}
+
+.content article th,
+.content article td {
+  padding: 8px 12px;
+  border: 1px solid rgba(31, 41, 55, 0.14);
+}
+
+.content article th {
+  background: rgba(79, 70, 229, 0.06);
+  text-align: left;
+}
+
+@media (max-width: 640px) {
+  .site-nav {
+    padding: 0 20px;
+  }
+
+  .hero {
+    padding: 60px 20px;
+  }
+
+  .hero h1 {
+    font-size: 36px;
+  }
+
+  .content {
+    padding: 32px 20px;
+  }
+}

@@ -3,13 +3,16 @@
 ## 仓库结构
 
 ```
-src/studio/                – Flutter 客户端
+src/studio/                – Flutter 客户端（写入口：报价与合同的增删改）
   lib/                   – 主程序
     models/              – 数据模型（报价、合同、履约）
     screens/             – 页面层
     widgets/             – 共享组件（状态徽章等）
   assets/data/           – JSON seed 数据
   test/                  – 组件测试
+src/site/                  – 展示站（React + Vite，业务定位与边界，site/* tag 发布）
+src/lite/                  – 轻量查看端（React + Vite，微信式三页签，只看不建，lite/* tag 发布）
+src/provider/              – 服务端骨架（Go 标准库，/healthz，读取通道按需立项）
 docs/                      – 工作文档
   dev-guide/                – 产品需求文档（报价制定、合同管理、产品边界）
 ```

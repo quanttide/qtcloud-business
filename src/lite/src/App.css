@@ -1,0 +1,84 @@
+.liteApp {
+  max-width: 760px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* 顶部 AppBar（微信式）：居中标题 */
+.appBar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.4rem;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+
+.appBarTitle {
+  margin: 0;
+  text-align: center;
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+.appBarSlot {
+  display: block;
+  width: 44px;
+}
+
+/* 底部导航（微信式）：图标在上、文字在下，当前页着色 */
+.tabBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+
+.tabItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.35rem 0 0.4rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.tabItem.active {
+  color: var(--accent);
+}
+
+.tabIcon {
+  display: inline-flex;
+}
+
+.tabLabel {
+  font-size: 0.72rem;
+}
+
+.liteMain {
+  padding: 0 1.1rem 5rem;
+  flex: 1;
+}
+
+.liteSectionTitle {
+  padding: 0.9rem 0 0.2rem;
+  font-size: 1.3rem;
+}
+
+.liteHint {
+  margin: 0.5rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
